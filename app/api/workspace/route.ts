@@ -151,7 +151,7 @@ export async function PATCH(req: Request): Promise<Response> {
   if (!supabaseServerConfigured() || !(await supabaseApiKeyAvailable())) {
     const token = generateId("invite");
     return NextResponse.json({
-      inviteUrl: `${origin}/workspace/${workspaceId || "demo"}?invite=${token}`,
+      inviteUrl: `${origin}/invites/${token}`,
       demo: true,
     });
   }
@@ -186,6 +186,6 @@ export async function PATCH(req: Request): Promise<Response> {
   }
 
   return NextResponse.json({
-    inviteUrl: `${origin}/workspace/${workspaceId}?invite=${invite.token as string}`,
+    inviteUrl: `${origin}/invites/${invite.token as string}`,
   });
 }
