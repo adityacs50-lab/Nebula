@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: #0d0d0d;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.4);
+}
+
+/* Slim dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2a transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* react-flow dark theme overrides */
+.react-flow__attribution {
+  background: transparent !important;
+  color: #444 !important;
+}
+.react-flow__minimap {
+  background: #1a1a1a !important;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #7c3aed;
+  border: 2px solid #0d0d0d;
+}
+.react-flow__handle:hover {
+  background: #8b5cf6;
+}
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+.react-flow__node {
+  border-radius: 12px;
+}
+.react-flow__resize-control.handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #7c3aed;
+  border: 1px solid #0d0d0d;
+}
+.react-flow__resize-control.line {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+/* highlight.js — Nebula dark token palette */
+.hljs {
+  color: #d4d4d8;
+  background: transparent;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag {
+  color: #c084fc;
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: #86efac;
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: #fbbf24;
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: #60a5fa;
+}
+.hljs-title.class_,
+.hljs-type,
+.hljs-built_in {
+  color: #22d3ee;
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion {
+  color: #6b7280;
+  font-style: italic;
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params {
+  color: #e4e4e7;
+}
+.hljs-meta {
+  color: #f472b6;
+}
+
+/* Cursor label transitions */
+.nebula-cursor {
+  transition: transform 0.12s linear;
+  will-change: transform;
+}
