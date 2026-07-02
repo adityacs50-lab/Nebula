@@ -1,5 +1,10 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+  supabaseEnvConfigured,
+} from "./config";
 
 const FALLBACK_URL = "https://placeholder.supabase.co";
 const FALLBACK_KEY = "public-anon-key-placeholder";
@@ -7,8 +12,7 @@ const FALLBACK_KEY = "public-anon-key-placeholder";
 let browserClient: SupabaseClient | null = null;
 
 export function supabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return Boolean(url) && !url!.startsWith("your_");
+  return supabaseEnvConfigured();
 }
 
 /**
@@ -18,10 +22,10 @@ export function supabaseConfigured(): boolean {
 export function createClient(): SupabaseClient {
   if (browserClient) return browserClient;
   const url = supabaseConfigured()
-    ? process.env.NEXT_PUBLIC_SUPABASE_URL!
+    ? getSupabaseUrl()!
     : FALLBACK_URL;
   const key = supabaseConfigured()
-    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ? getSupabasePublishableKey()!
     : FALLBACK_KEY;
   browserClient = createBrowserClient(url, key);
   return browserClient;

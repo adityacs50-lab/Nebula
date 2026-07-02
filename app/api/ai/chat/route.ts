@@ -1,4 +1,4 @@
-import { anthropicConfigured, CLAUDE_MODEL, getAnthropicClient } from "@/lib/claude/client";
+import { geminiConfigured, GEMINI_MODEL, getGeminiClient } from "@/lib/claude/client";
 import type { CanvasContext } from "@/lib/canvas/context";
 
 export const runtime = "nodejs";
@@ -10,9 +10,9 @@ type ChatRequestBody = {
 };
 
 export async function POST(req: Request): Promise<Response> {
-  if (!anthropicConfigured()) {
+  if (!geminiConfigured()) {
     return new Response(
-      "Nebula AI is not connected yet. Add your ANTHROPIC_API_KEY to .env.local (see README.md) and restart the server.",
+      "Nebula AI is not connected yet. Add your GEMINI_API_KEY to .env.local (see README.md) and restart the server.",
       { status: 503 },
     );
   }
@@ -29,12 +29,10 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("messages array is required", { status: 400 });
   }
 
-  const client = getAnthropicClient();
-
-  const stream = client.messages.stream({
-    model: CLAUDE_MODEL,
-    max_tokens: 1024,
-    system: `You are an AI assistant embedded in Nebula — a shared AI workspace for founding teams.
+  const client = getGeminiClient();
+  const model = client.getGenerativeModel({
+    model: GEMINI_MODEL,
+    systemInstruction: `You are an AI assistant embedded in Nebula — a shared AI workspace for founding teams.
 
 You have full visibility into everything this founding team is working on right now.
 
@@ -47,27 +45,37 @@ Guidelines:
 - Be concise, direct, and builder-focused
 - You're talking to founders building something real — match their energy
 - If you see connections between different blocks on the canvas, point them out`,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
-      stream.on("text", (text) => {
-        controller.enqueue(encoder.encode(text));
-      });
-      stream.on("end", () => {
-        controller.close();
-      });
-      stream.on("error", (error) => {
-        controller.enqueue(
-          encoder.encode(`\n\n[Nebula AI error: ${error.message}]`),
-        );
-        controller.close();
-      });
-    },
-    cancel() {
-      stream.abort();
+      void (async () => {
+        try {
+          const result = await model.generateContentStream({
+            contents: messages.map((m) => ({
+              role: m.role === "assistant" ? "model" : "user",
+              parts: [{ text: m.content }],
+            })),
+          });
+
+          for await (const chunk of result.stream) {
+            const text = chunk.text();
+            if (text) {
+              controller.enqueue(encoder.encode(text));
+            }
+          }
+
+          controller.close();
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `\n\n[Nebula AI error: ${error instanceof Error ? error.message : "Unknown error"}]`,
+            ),
+          );
+          controller.close();
+        }
+      })();
     },
   });
 

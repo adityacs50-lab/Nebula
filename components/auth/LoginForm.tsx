@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  isSupabaseInvalidApiKeyError,
+  markSupabaseApiKeyInvalid,
+} from "@/lib/supabase/config";
 
 export function LoginForm() {
   const router = useRouter();
@@ -20,7 +24,7 @@ export function LoginForm() {
     setError(null);
     if (!configured) {
       // Demo mode: Supabase isn't wired up yet, go straight to the app
-      router.push("/dashboard");
+      router.push("/workspace/demo");
       return;
     }
     setLoading(true);
@@ -28,6 +32,11 @@ export function LoginForm() {
       await signIn(email, password);
       router.push("/dashboard");
     } catch (err) {
+      if (isSupabaseInvalidApiKeyError(err)) {
+        markSupabaseApiKeyInvalid();
+        router.push("/workspace/demo");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Failed to sign in");
     } finally {
       setLoading(false);
@@ -37,12 +46,17 @@ export function LoginForm() {
   async function handleGoogle() {
     setError(null);
     if (!configured) {
-      router.push("/dashboard");
+      router.push("/workspace/demo");
       return;
     }
     try {
       await signInWithGoogle();
     } catch (err) {
+      if (isSupabaseInvalidApiKeyError(err)) {
+        markSupabaseApiKeyInvalid();
+        router.push("/workspace/demo");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Google sign-in failed");
     }
   }

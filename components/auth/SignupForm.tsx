@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  isSupabaseInvalidApiKeyError,
+  markSupabaseApiKeyInvalid,
+} from "@/lib/supabase/config";
 import { GoogleIcon } from "./LoginForm";
 
 export function SignupForm() {
@@ -46,7 +50,14 @@ export function SignupForm() {
     setLoading(true);
     try {
       if (configured) {
-        await signUp(name, email, password);
+        try {
+          await signUp(name, email, password);
+        } catch (err) {
+          if (!isSupabaseInvalidApiKeyError(err)) {
+            throw err;
+          }
+          markSupabaseApiKeyInvalid();
+        }
       }
       // After signup → create first workspace → redirect to canvas
       const workspaceId = await createFirstWorkspace().catch(() => "demo");
@@ -66,6 +77,11 @@ export function SignupForm() {
     try {
       await signInWithGoogle();
     } catch (err) {
+      if (isSupabaseInvalidApiKeyError(err)) {
+        markSupabaseApiKeyInvalid();
+        router.push("/workspace/demo");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Google sign-up failed");
     }
   }

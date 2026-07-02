@@ -1,13 +1,17 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+  supabaseEnvConfigured,
+} from "./config";
 
 const FALLBACK_URL = "https://placeholder.supabase.co";
 const FALLBACK_KEY = "public-anon-key-placeholder";
 
 export function supabaseServerConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return Boolean(url) && !url!.startsWith("your_");
+  return supabaseEnvConfigured();
 }
 
 /**
@@ -17,10 +21,10 @@ export function supabaseServerConfigured(): boolean {
 export function createClient(): SupabaseClient {
   const cookieStore = cookies();
   const url = supabaseServerConfigured()
-    ? process.env.NEXT_PUBLIC_SUPABASE_URL!
+    ? getSupabaseUrl()!
     : FALLBACK_URL;
   const key = supabaseServerConfigured()
-    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ? getSupabasePublishableKey()!
     : FALLBACK_KEY;
 
   return createServerClient(url, key, {

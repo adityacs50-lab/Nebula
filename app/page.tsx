@@ -78,7 +78,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg text-text-secondary">
-              Your co-founder is on ChatGPT. You&apos;re on Claude. Nobody knows
+              Your co-founder is on ChatGPT. You&apos;re on Gemini. Nobody knows
               what the AI told who. Nebula fixes that.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
@@ -129,7 +129,7 @@ export default function LandingPage() {
             <FeatureCard
               icon={<Brain size={22} className="text-secondary" />}
               title="AI with full team context"
-              body="Every Claude call is injected with a live snapshot of the whole canvas — the AI knows what your co-founders are building right now."
+              body="Every Gemini call is injected with a live snapshot of the whole canvas — the AI knows what your co-founders are building right now."
             />
             <FeatureCard
               icon={<Users size={22} className="text-success" />}
@@ -166,7 +166,7 @@ export default function LandingPage() {
                 "Unlimited AI chats with full canvas context",
                 "Unlimited blocks, flows, and mind maps",
                 "Real-time multiplayer canvas",
-                "Claude Sonnet 4.6 included",
+                "Gemini 2.5 Flash included",
                 "Invite links and workspace permissions",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">

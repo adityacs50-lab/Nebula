@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { anthropicConfigured, CLAUDE_MODEL, getAnthropicClient } from "@/lib/claude/client";
+import { geminiConfigured, GEMINI_MODEL, getGeminiClient } from "@/lib/claude/client";
 import type { CanvasContext } from "@/lib/canvas/context";
 
 export const runtime = "nodejs";
@@ -12,11 +12,11 @@ type CodeRequestBody = {
 };
 
 export async function POST(req: Request): Promise<Response> {
-  if (!anthropicConfigured()) {
+  if (!geminiConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Nebula AI is not connected yet. Add your ANTHROPIC_API_KEY to .env.local (see README.md) and restart the server.",
+          "Nebula AI is not connected yet. Add your GEMINI_API_KEY to .env.local (see README.md) and restart the server.",
       },
       { status: 503 },
     );
@@ -37,13 +37,10 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const client = getAnthropicClient();
-
-  try {
-    const response = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
-      system: `You are the code generation engine inside Nebula — a shared AI workspace for founding teams.
+  const client = getGeminiClient();
+  const model = client.getGenerativeModel({
+    model: GEMINI_MODEL,
+    systemInstruction: `You are the code generation engine inside Nebula — a shared AI workspace for founding teams.
 
 You can see the team's entire canvas, so generated code should fit what they are already building.
 
@@ -56,19 +53,20 @@ Rules:
 - Write production-quality, idiomatic ${language}
 - Include brief comments only where a non-obvious decision needs context
 - If other blocks on the canvas define related code or flows, stay consistent with them`,
-      messages: [
+  });
+
+  try {
+    const result = await model.generateContent({
+      contents: [
         {
           role: "user",
-          content: `Generate ${language} code for the following:\n\n${prompt}`,
+          parts: [{ text: `Generate ${language} code for the following:\n\n${prompt}` }],
         },
       ],
+      generationConfig: { maxOutputTokens: 2048 },
     });
-
-    let code = "";
-    for (const block of response.content) {
-      if (block.type === "text") code += block.text;
-    }
-    code = stripFences(code.trim());
+    const response = await result.response;
+    const code = stripFences(response.text().trim());
 
     return NextResponse.json({ code });
   } catch (error) {

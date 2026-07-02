@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import {
+  isSupabaseInvalidApiKeyError,
+  supabaseApiKeyAvailable,
+} from "@/lib/supabase/config";
 
 export type AuthState = {
   user: User | null;
@@ -18,34 +22,61 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    const configured = supabaseConfigured();
-    if (!configured) {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+
+    if (!supabaseConfigured()) {
       setState({ user: null, loading: false, configured: false });
-      return;
+      return () => {
+        active = false;
+      };
     }
-    const supabase = createClient();
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        setState({ user: data.user, loading: false, configured: true });
-      })
-      .catch((err) => {
-        if (err?.message?.includes("Invalid API key")) {
+
+    async function initAuth() {
+      const apiKeyAvailable = await supabaseApiKeyAvailable();
+      if (!active) return;
+      if (!apiKeyAvailable) {
+        setState({ user: null, loading: false, configured: false });
+        return;
+      }
+
+      const supabase = createClient();
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (!active) return;
+        if (isSupabaseInvalidApiKeyError(error)) {
           setState({ user: null, loading: false, configured: false });
-        } else {
-          setState({ user: null, loading: false, configured: true });
+          return;
         }
+        setState({ user: data.user, loading: false, configured: true });
+      } catch (error) {
+        if (!active) return;
+        if (isSupabaseInvalidApiKeyError(error)) {
+          setState({ user: null, loading: false, configured: false });
+          return;
+        }
+        setState({ user: null, loading: false, configured: true });
+      }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!active) return;
+        setState({
+          user: session?.user ?? null,
+          loading: false,
+          configured: true,
+        });
       });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState({
-        user: session?.user ?? null,
-        loading: false,
-        configured: true,
-      });
-    });
-    return () => subscription.unsubscribe();
+      unsubscribe = () => subscription.unsubscribe();
+    }
+
+    void initAuth();
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

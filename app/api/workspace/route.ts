@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, supabaseServerConfigured } from "@/lib/supabase/server";
+import {
+  isSupabaseInvalidApiKeyError,
+  supabaseApiKeyAvailable,
+} from "@/lib/supabase/config";
 import { generateId } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -14,13 +18,17 @@ const DEMO_WORKSPACE = {
 
 /** List the current user's workspaces. */
 export async function GET(): Promise<Response> {
-  if (!supabaseServerConfigured()) {
+  if (!supabaseServerConfigured() || !(await supabaseApiKeyAvailable())) {
     return NextResponse.json({ workspaces: [DEMO_WORKSPACE], demo: true });
   }
   const supabase = createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+  if (isSupabaseInvalidApiKeyError(authError)) {
+    return NextResponse.json({ workspaces: [DEMO_WORKSPACE], demo: true });
+  }
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -75,7 +83,7 @@ export async function POST(req: Request): Promise<Response> {
     // keep default name
   }
 
-  if (!supabaseServerConfigured()) {
+  if (!supabaseServerConfigured() || !(await supabaseApiKeyAvailable())) {
     return NextResponse.json({
       workspace: { ...DEMO_WORKSPACE, id: generateId("ws"), name },
       demo: true,
@@ -85,7 +93,14 @@ export async function POST(req: Request): Promise<Response> {
   const supabase = createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+  if (isSupabaseInvalidApiKeyError(authError)) {
+    return NextResponse.json({
+      workspace: { ...DEMO_WORKSPACE, id: generateId("ws"), name },
+      demo: true,
+    });
+  }
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -133,7 +148,7 @@ export async function PATCH(req: Request): Promise<Response> {
 
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  if (!supabaseServerConfigured()) {
+  if (!supabaseServerConfigured() || !(await supabaseApiKeyAvailable())) {
     const token = generateId("invite");
     return NextResponse.json({
       inviteUrl: `${origin}/workspace/${workspaceId || "demo"}?invite=${token}`,
@@ -144,7 +159,15 @@ export async function PATCH(req: Request): Promise<Response> {
   const supabase = createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+  if (isSupabaseInvalidApiKeyError(authError)) {
+    const token = generateId("invite");
+    return NextResponse.json({
+      inviteUrl: `${origin}/workspace/${workspaceId || "demo"}?invite=${token}`,
+      demo: true,
+    });
+  }
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

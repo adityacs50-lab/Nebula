@@ -65,7 +65,7 @@ export function extractBlockContent(block: Block): string {
 /**
  * The core differentiator: a live snapshot of everything the team is
  * working on. Rebuilt on every block change and injected into EVERY
- * Claude API call as system context.
+ * Gemini API call as system context.
  */
 export function buildCanvasContext(
   blocks: Block[],

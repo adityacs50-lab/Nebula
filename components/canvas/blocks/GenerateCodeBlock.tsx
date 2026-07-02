@@ -110,7 +110,7 @@ export function GenerateCodeBlock({
           ) : (
             <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-text-secondary">
               {generating
-                ? "Claude is writing code..."
+                ? "Gemini is writing code..."
                 : "Generated code will appear here"}
             </div>
           )}

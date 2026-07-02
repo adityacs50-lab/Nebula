@@ -1,5 +1,12 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+  isSupabaseInvalidApiKeyError,
+  supabaseApiKeyAvailable,
+  supabaseEnvConfigured,
+} from "./config";
 
 /**
  * Refreshes the Supabase auth session on every request so Server
@@ -11,11 +18,11 @@ export async function updateSession(
 ): Promise<NextResponse> {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key || url.startsWith("your_")) {
+  if (!supabaseEnvConfigured() || !(await supabaseApiKeyAvailable())) {
     return response;
   }
+  const url = getSupabaseUrl()!;
+  const key = getSupabasePublishableKey()!;
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -39,6 +46,9 @@ export async function updateSession(
     },
   });
 
-  await supabase.auth.getUser();
+  const { error } = await supabase.auth.getUser();
+  if (isSupabaseInvalidApiKeyError(error)) {
+    return response;
+  }
   return response;
 }

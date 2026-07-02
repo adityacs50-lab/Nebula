@@ -13,7 +13,7 @@ import { useSelf } from "@/lib/liveblocks/config";
 import { formatTime, initials, cn } from "@/lib/utils";
 
 /**
- * Full multiplayer chat with Claude. Every request carries the live
+ * Full multiplayer chat with Gemini. Every request carries the live
  * canvas context, and the streamed reply is written back into shared
  * state so the whole team sees the same conversation.
  */

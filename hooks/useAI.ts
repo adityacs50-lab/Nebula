@@ -14,7 +14,7 @@ export type OutgoingChatMessage = {
 
 /**
  * Client-side AI gateway. Builds the live canvas context from Liveblocks
- * storage + presence and injects it into every request, so Claude always
+ * storage + presence and injects it into every request, so Gemini always
  * has the full picture of what the whole team is doing.
  */
 export function useAI(workspaceId: string) {

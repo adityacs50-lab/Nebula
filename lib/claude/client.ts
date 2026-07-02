@@ -1,21 +1,21 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const CLAUDE_MODEL = "claude-sonnet-4-6";
+export const GEMINI_MODEL = "gemini-2.5-flash";
 
-export function anthropicConfigured(): boolean {
-  const key = process.env.ANTHROPIC_API_KEY;
+export function geminiConfigured(): boolean {
+  const key = process.env.GEMINI_API_KEY;
   return Boolean(key) && !key!.startsWith("your_");
 }
 
 /**
- * Server-only Anthropic client. Constructed lazily so builds succeed
+ * Server-only Gemini client. Constructed lazily so builds succeed
  * without an API key; routes return a helpful error at runtime instead.
  */
-export function getAnthropicClient(): Anthropic {
-  if (!anthropicConfigured()) {
+export function getGeminiClient(): GoogleGenerativeAI {
+  if (!geminiConfigured()) {
     throw new Error(
-      "ANTHROPIC_API_KEY is not configured. Add it to .env.local — see README.md.",
+      "GEMINI_API_KEY is not configured. Add it to .env.local — see README.md.",
     );
   }
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 }
