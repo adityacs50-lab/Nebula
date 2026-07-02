@@ -18,7 +18,8 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    if (!supabaseConfigured()) {
+    const configured = supabaseConfigured();
+    if (!configured) {
       setState({ user: null, loading: false, configured: false });
       return;
     }
@@ -28,8 +29,12 @@ export function useAuth() {
       .then(({ data }) => {
         setState({ user: data.user, loading: false, configured: true });
       })
-      .catch(() => {
-        setState({ user: null, loading: false, configured: true });
+      .catch((err) => {
+        if (err?.message?.includes("Invalid API key")) {
+          setState({ user: null, loading: false, configured: false });
+        } else {
+          setState({ user: null, loading: false, configured: true });
+        }
       });
     const {
       data: { subscription },
