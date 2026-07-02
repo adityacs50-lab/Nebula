@@ -13,6 +13,7 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { TopBar } from "@/components/topbar/TopBar";
 import { useCanvasStore } from "@/store/canvasStore";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { recordRecentWorkspace } from "@/lib/recentWorkspaces";
 import type { Connection } from "@/types/blocks";
 
 export default function WorkspacePage({
@@ -22,6 +23,10 @@ export default function WorkspacePage({
 }) {
   const workspaceId = params.id;
   const setWorkspaceName = useCanvasStore((s) => s.setWorkspaceName);
+
+  useEffect(() => {
+    recordRecentWorkspace(workspaceId);
+  }, [workspaceId]);
 
   // Pull the real workspace name from Supabase when configured;
   // fall back to the demo name otherwise.

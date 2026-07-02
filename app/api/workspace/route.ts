@@ -14,6 +14,7 @@ const DEMO_WORKSPACE = {
   name: "Project Nebula",
   membersCount: 4,
   lastActive: new Date().toISOString(),
+  role: "owner" as const,
 };
 
 /** List the current user's workspaces. */
@@ -35,7 +36,7 @@ export async function GET(): Promise<Response> {
 
   const { data: memberships, error } = await supabase
     .from("workspace_members")
-    .select("workspace_id, workspaces(id, name, updated_at)")
+    .select("workspace_id, role, workspaces(id, name, updated_at)")
     .eq("user_id", user.id);
 
   if (error) {
@@ -44,6 +45,7 @@ export async function GET(): Promise<Response> {
 
   type MembershipRow = {
     workspace_id: string;
+    role: string | null;
     workspaces: { id: string; name: string; updated_at: string } | null;
   };
 
@@ -68,7 +70,11 @@ export async function GET(): Promise<Response> {
       name: r.workspaces!.name,
       membersCount: counts.get(r.workspace_id) ?? 1,
       lastActive: r.workspaces!.updated_at,
-    }));
+      role: (r.role ?? "member") as "owner" | "member",
+    }))
+    .sort(
+      (a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
+    );
 
   return NextResponse.json({ workspaces });
 }

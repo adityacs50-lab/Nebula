@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -20,10 +20,34 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/hooks/useAuth";
 import { relativeTime } from "@/lib/utils";
+import { getRecentWorkspaceIds } from "@/lib/recentWorkspaces";
 import type { WorkspaceSummary } from "@/types/workspace";
 
+const VIEW_COPY: Record<string, { title: string; subtitle: string; empty: string }> = {
+  recent: {
+    title: "Recently visited",
+    subtitle: "Workspaces you've opened on this device.",
+    empty: "You haven't opened any workspaces on this device yet.",
+  },
+  shared: {
+    title: "Shared with me",
+    subtitle: "Workspaces you've joined that someone else owns.",
+    empty: "No workspaces have been shared with you yet.",
+  },
+};
+
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view") ?? "";
   const { user, signOut, configured } = useAuth();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +127,20 @@ export default function DashboardPage() {
     user?.email ??
     "Founder";
 
+  const visibleWorkspaces = useMemo(() => {
+    if (view === "recent") {
+      const recentIds = getRecentWorkspaceIds();
+      const byId = new Map(workspaces.map((w) => [w.id, w]));
+      return recentIds.map((id) => byId.get(id)).filter(Boolean) as WorkspaceSummary[];
+    }
+    if (view === "shared") {
+      return workspaces.filter((w) => w.role && w.role !== "owner");
+    }
+    return workspaces;
+  }, [workspaces, view]);
+
+  const copy = VIEW_COPY[view];
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -135,9 +173,11 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Your workspaces</h1>
+            <h1 className="text-2xl font-bold">
+              {copy?.title ?? "Your workspaces"}
+            </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              Pick a canvas or spin up a new one for your team.
+              {copy?.subtitle ?? "Pick a canvas or spin up a new one for your team."}
             </p>
           </div>
           <Button onClick={() => setCreateOpen(true)}>
@@ -155,9 +195,23 @@ export default function DashboardPage() {
               />
             ))}
           </div>
+        ) : visibleWorkspaces.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
+            <p className="text-sm text-text-secondary">
+              {copy?.empty ?? "No workspaces yet."}
+            </p>
+            {view && (
+              <Link
+                href="/dashboard"
+                className="mt-3 text-xs text-primary hover:underline"
+              >
+                View all workspaces
+              </Link>
+            )}
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {workspaces.map((workspace, index) => (
+            {visibleWorkspaces.map((workspace, index) => (
               <motion.div
                 key={workspace.id}
                 initial={{ opacity: 0, y: 10 }}

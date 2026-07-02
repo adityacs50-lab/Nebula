@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useReactFlow } from "reactflow";
 import {
   Sparkles,
   Search,
@@ -9,20 +11,16 @@ import {
   MessageSquare,
   Folder,
   Share2,
+  ChevronDown,
 } from "lucide-react";
 import { TeamspaceList } from "./TeamspaceList";
 import { ToolsList } from "./ToolsList";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
-import { initials } from "@/lib/utils";
-
-const NAV_ITEMS = [
-  { label: "Home", icon: <Home size={13} />, active: true },
-  { label: "Recent", icon: <Clock size={13} /> },
-  { label: "AI Chat", icon: <MessageSquare size={13} /> },
-  { label: "My Files", icon: <Folder size={13} /> },
-  { label: "Shared with me", icon: <Share2 size={13} /> },
-];
+import { useBlocks } from "@/hooks/useBlocks";
+import { useCanvasStore } from "@/store/canvasStore";
+import { BLOCK_COLORS, BLOCK_LABELS } from "@/types/blocks";
+import { cn, initials } from "@/lib/utils";
 
 /** Fixed 220px left sidebar for the workspace view. */
 export function Sidebar() {
@@ -31,6 +29,26 @@ export function Sidebar() {
   const name =
     typeof meta.full_name === "string" ? meta.full_name : "Aditya Shinde";
   const email = user?.email ?? "shindeadityau@gmail.com";
+
+  const { blocks, addBlock } = useBlocks();
+  const setSelectedBlockId = useCanvasStore((s) => s.setSelectedBlockId);
+  const { setCenter } = useReactFlow();
+  const [filesOpen, setFilesOpen] = useState(false);
+
+  function focusBlock(id: string, position: { x: number; y: number }) {
+    setSelectedBlockId(id);
+    setCenter(position.x + 200, position.y + 150, { zoom: 1, duration: 400 });
+  }
+
+  function jumpToAIChat() {
+    const existing = (blocks ?? []).find((b) => b.type === "ai-chat");
+    if (existing) {
+      focusBlock(existing.id, existing.position);
+      return;
+    }
+    const id = addBlock("ai-chat", { x: 240, y: 200 });
+    if (typeof id === "string") focusBlock(id, { x: 240, y: 200 });
+  }
 
   return (
     <aside className="flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-surface">
@@ -58,20 +76,89 @@ export function Sidebar() {
         {/* Navigation */}
         <nav>
           <ul className="space-y-0.5">
-            {NAV_ITEMS.map((item) => (
-              <li key={item.label}>
-                <button
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
-                    item.active
-                      ? "bg-surface-hover text-white"
-                      : "text-text-secondary hover:bg-surface-hover hover:text-white"
-                  }`}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              </li>
-            ))}
+            <li>
+              <Link
+                href="/dashboard"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-white"
+              >
+                <Home size={13} />
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/dashboard?view=recent"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-white"
+              >
+                <Clock size={13} />
+                Recent
+              </Link>
+            </li>
+            <li>
+              <button
+                onClick={jumpToAIChat}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-white"
+              >
+                <MessageSquare size={13} />
+                AI Chat
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setFilesOpen((v) => !v)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
+                  filesOpen
+                    ? "bg-surface-hover text-white"
+                    : "text-text-secondary hover:bg-surface-hover hover:text-white",
+                )}
+              >
+                <Folder size={13} />
+                My Files
+                <ChevronDown
+                  size={12}
+                  className={cn(
+                    "ml-auto transition-transform",
+                    filesOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {filesOpen && (
+                <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3">
+                  {(blocks ?? []).length === 0 ? (
+                    <li className="px-2 py-1.5 text-[11px] text-text-secondary/70">
+                      No blocks on this canvas yet.
+                    </li>
+                  ) : (
+                    (blocks ?? []).map((block) => (
+                      <li key={block.id}>
+                        <button
+                          onClick={() => focusBlock(block.id, block.position)}
+                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-white"
+                        >
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: BLOCK_COLORS[block.type] }}
+                          />
+                          <span className="truncate">
+                            {block.data.title || BLOCK_LABELS[block.type]}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </li>
+            <li>
+              <Link
+                href="/dashboard?view=shared"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-white"
+              >
+                <Share2 size={13} />
+                Shared with me
+              </Link>
+            </li>
           </ul>
         </nav>
 

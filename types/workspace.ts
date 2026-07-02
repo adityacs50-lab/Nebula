@@ -30,6 +30,7 @@ export type WorkspaceSummary = {
   name: string;
   membersCount: number;
   lastActive: string;
+  role?: WorkspaceRole;
 };
 
 export type Invite = {

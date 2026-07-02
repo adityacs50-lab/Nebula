@@ -37,6 +37,7 @@ export function useCanvas() {
       const id = addBlock(type, flow);
       store.closeAddMenu();
       if (typeof id === "string") store.setSelectedBlockId(id);
+      return id;
     },
     [screenToFlowPosition, addBlock, store],
   );
@@ -46,6 +47,7 @@ export function useCanvas() {
       const id = addBlock(type, flow);
       store.closeAddMenu();
       if (typeof id === "string") store.setSelectedBlockId(id);
+      return id;
     },
     [addBlock, store],
   );
