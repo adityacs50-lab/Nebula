@@ -125,3 +125,56 @@ body {
   transition: transform 0.12s linear;
   will-change: transform;
 }
+
+/* ---- Landing page ---- */
+
+/* Infinite logo/feature marquee */
+@keyframes nebula-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: nebula-marquee 28s linear infinite;
+}
+
+/* Slow hue drift for the hero gradient headline */
+@keyframes nebula-gradient-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.animate-gradient-pan {
+  background-size: 200% 200%;
+  animation: nebula-gradient-pan 6s ease-in-out infinite;
+}
+
+/* Soft float for decorative orbs */
+@keyframes nebula-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+.animate-float {
+  animation: nebula-float 7s ease-in-out infinite;
+}
+
+/* Smooth anchor scrolling that clears the fixed landing nav */
+html {
+  scroll-behavior: smooth;
+}
+section[id],
+div[id] {
+  scroll-margin-top: 96px;
+}
