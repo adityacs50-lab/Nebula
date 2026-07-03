@@ -62,6 +62,30 @@ export function markSupabaseApiKeyInvalid(): void {
   apiKeyValid = false;
 }
 
+/**
+ * PostgREST raises PGRST205 ("Could not find the table ... in the schema
+ * cache") when the app's tables were never created — i.e. the user hasn't
+ * run the SQL setup yet.
+ */
+export function isSupabaseMissingTableError(error: unknown): boolean {
+  if (!error) return false;
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code: unknown }).code)
+      : "";
+  if (code === "PGRST205") return true;
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+  return message.toLowerCase().includes("could not find the table");
+}
+
+export const SUPABASE_SETUP_HINT =
+  "Your Supabase project doesn't have Nebula's tables yet. Open Supabase → SQL Editor, paste the contents of supabase/setup.sql from this repo, and click Run — then try again.";
+
 export function isSupabaseInvalidApiKeyError(error: unknown): boolean {
   if (!error) return false;
 

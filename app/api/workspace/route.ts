@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient, supabaseServerConfigured } from "@/lib/supabase/server";
 import {
   isSupabaseInvalidApiKeyError,
+  isSupabaseMissingTableError,
+  SUPABASE_SETUP_HINT,
   supabaseApiKeyAvailable,
 } from "@/lib/supabase/config";
 import { generateId } from "@/lib/utils";
@@ -40,6 +42,9 @@ export async function GET(): Promise<Response> {
     .eq("user_id", user.id);
 
   if (error) {
+    if (isSupabaseMissingTableError(error)) {
+      return NextResponse.json({ error: SUPABASE_SETUP_HINT }, { status: 503 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -118,6 +123,9 @@ export async function POST(req: Request): Promise<Response> {
     .single();
 
   if (error || !workspace) {
+    if (isSupabaseMissingTableError(error)) {
+      return NextResponse.json({ error: SUPABASE_SETUP_HINT }, { status: 503 });
+    }
     return NextResponse.json(
       { error: error?.message ?? "Failed to create workspace" },
       { status: 500 },

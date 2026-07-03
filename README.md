@@ -44,7 +44,7 @@ cp .env.local.example .env.local
 
 **Getting the keys, step by step:**
 
-- **Google Gemini** — create an API key at aistudio.google.com, then add it to your environment as `GEMINI_API_KEY`. The AI chat and code generation blocks call `gemini-2.5-flash` through `/api/ai/chat` and `/api/ai/code`.
+- **Google Gemini** — create an API key at aistudio.google.com, then add it to your environment as `GEMINI_API_KEY`. The AI chat and code generation blocks call `gemini-2.5-flash` through `/api/ai/chat` and `/api/ai/code`; the AI image block calls `gemini-2.5-flash-image` through `/api/ai/image` (with automatic fallback to older image-capable model names).
 - **Supabase** — create a free project at supabase.com. Grab the project URL, publishable key, secret key, and JWKS URL from Project Settings → API. To enable Google login, go to Authentication → Providers → Google and add your Google OAuth client credentials.
 - **Liveblocks** — create a free project at liveblocks.io. Both the secret key (used by `/api/liveblocks/auth`) and the public key are on the project's API keys page.
 
@@ -52,15 +52,15 @@ cp .env.local.example .env.local
 
 ### 3. Database schema
 
-Apply the migrations in `supabase/migrations/`, in order (`001_initial.sql` then `002_workspace_members_unique.sql`):
+**Easiest:** open your Supabase project → SQL Editor → paste the whole of `supabase/setup.sql` → Run. It's idempotent (safe to run twice) and covers every migration. If the app ever shows "Could not find the table 'public.…' in the schema cache", this step is what's missing.
 
-- **Option A (dashboard):** open your Supabase project → SQL Editor → paste each file → Run.
-- **Option B (CLI):**
-  ```bash
-  npx supabase login
-  npx supabase link --project-ref <your-project-ref>
-  npx supabase db push
-  ```
+Or apply the migrations in `supabase/migrations/` in order via the CLI:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+```
 
 This creates `workspaces`, `workspace_members`, `blocks`, `connections`, and `invites` with row-level security so users only see workspaces they belong to, plus a uniqueness constraint on `workspace_members(workspace_id, user_id)` so re-opening an invite link never creates a duplicate membership row.
 

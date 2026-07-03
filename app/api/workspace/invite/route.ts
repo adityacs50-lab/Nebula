@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient, supabaseServerConfigured } from "@/lib/supabase/server";
 import {
   isSupabaseInvalidApiKeyError,
+  isSupabaseMissingTableError,
+  SUPABASE_SETUP_HINT,
   supabaseApiKeyAvailable,
 } from "@/lib/supabase/config";
 import { generateId } from "@/lib/utils";
@@ -69,6 +71,9 @@ export async function POST(req: Request): Promise<Response> {
     .single();
 
   if (error || !invite) {
+    if (isSupabaseMissingTableError(error)) {
+      return NextResponse.json({ error: SUPABASE_SETUP_HINT }, { status: 503 });
+    }
     const isRlsDenied = error?.message
       .toLowerCase()
       .includes("row-level security");

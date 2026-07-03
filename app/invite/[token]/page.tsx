@@ -4,6 +4,8 @@ import { AlertCircle, Sparkles } from "lucide-react";
 import { createClient, supabaseServerConfigured } from "@/lib/supabase/server";
 import {
   isSupabaseInvalidApiKeyError,
+  isSupabaseMissingTableError,
+  SUPABASE_SETUP_HINT,
   supabaseApiKeyAvailable,
 } from "@/lib/supabase/config";
 import { createAdminClient, supabaseAdminConfigured } from "@/lib/supabase/admin";
@@ -65,6 +67,9 @@ export default async function InvitePage({
     .maybeSingle<InviteRow>();
 
   if (inviteError || !invite) {
+    if (isSupabaseMissingTableError(inviteError)) {
+      return <InviteError message={SUPABASE_SETUP_HINT} />;
+    }
     return <InviteError message="This invite link is invalid." />;
   }
 
