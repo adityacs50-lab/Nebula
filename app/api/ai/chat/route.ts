@@ -1,4 +1,10 @@
-import { geminiConfigured, GEMINI_MODEL, getGeminiClient } from "@/lib/claude/client";
+import {
+  geminiConfigured,
+  GEMINI_TEXT_MODELS,
+  getGeminiClient,
+  isModelUnavailableError,
+  isQuotaError,
+} from "@/lib/claude/client";
 import type { CanvasContext } from "@/lib/canvas/context";
 
 export const runtime = "nodejs";
@@ -30,9 +36,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: `You are an AI assistant embedded in Nebula — a shared AI workspace for founding teams.
+  const systemInstruction = `You are an AI assistant embedded in Nebula — a shared AI workspace for founding teams.
 
 You have full visibility into everything this founding team is working on right now.
 
@@ -44,37 +48,54 @@ Guidelines:
 - Reference what other team members are working on when relevant
 - Be concise, direct, and builder-focused
 - You're talking to founders building something real — match their energy
-- If you see connections between different blocks on the canvas, point them out`,
-  });
+- If you see connections between different blocks on the canvas, point them out`;
+
+  const contents = messages.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
       void (async () => {
-        try {
-          const result = await model.generateContentStream({
-            contents: messages.map((m) => ({
-              role: m.role === "assistant" ? "model" : "user",
-              parts: [{ text: m.content }],
-            })),
+        let lastError: unknown = null;
+        for (const modelName of GEMINI_TEXT_MODELS) {
+          const model = client.getGenerativeModel({
+            model: modelName,
+            systemInstruction,
           });
-
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) {
-              controller.enqueue(encoder.encode(text));
+          let emitted = false;
+          try {
+            const result = await model.generateContentStream({ contents });
+            for await (const chunk of result.stream) {
+              const text = chunk.text();
+              if (text) {
+                emitted = true;
+                controller.enqueue(encoder.encode(text));
+              }
             }
+            controller.close();
+            return;
+          } catch (error) {
+            lastError = error;
+            // Model missing or quota-blocked for this key and nothing has
+            // been streamed yet — safe to retry with the next model.
+            if (
+              !emitted &&
+              (isModelUnavailableError(error) || isQuotaError(error))
+            ) {
+              continue;
+            }
+            break;
           }
-
-          controller.close();
-        } catch (error) {
-          controller.enqueue(
-            encoder.encode(
-              `\n\n[Nebula AI error: ${error instanceof Error ? error.message : "Unknown error"}]`,
-            ),
-          );
-          controller.close();
         }
+        controller.enqueue(
+          encoder.encode(
+            `\n\n[Nebula AI error: ${lastError instanceof Error ? lastError.message : "Unknown error"}]`,
+          ),
+        );
+        controller.close();
       })();
     },
   });

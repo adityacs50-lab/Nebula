@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { geminiConfigured, GEMINI_MODEL, getGeminiClient } from "@/lib/claude/client";
+import {
+  geminiConfigured,
+  GEMINI_TEXT_MODELS,
+  getGeminiClient,
+  isModelUnavailableError,
+  isQuotaError,
+} from "@/lib/claude/client";
 import type { CanvasContext } from "@/lib/canvas/context";
 
 export const runtime = "nodejs";
@@ -38,9 +44,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: `You are the code generation engine inside Nebula — a shared AI workspace for founding teams.
+  const systemInstruction = `You are the code generation engine inside Nebula — a shared AI workspace for founding teams.
 
 You can see the team's entire canvas, so generated code should fit what they are already building.
 
@@ -52,28 +56,38 @@ Rules:
 - Do not wrap the code in markdown fences
 - Write production-quality, idiomatic ${language}
 - Include brief comments only where a non-obvious decision needs context
-- If other blocks on the canvas define related code or flows, stay consistent with them`,
-  });
+- If other blocks on the canvas define related code or flows, stay consistent with them`;
 
-  try {
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `Generate ${language} code for the following:\n\n${prompt}` }],
-        },
-      ],
-      generationConfig: { maxOutputTokens: 2048 },
+  let lastError: unknown = null;
+  for (const modelName of GEMINI_TEXT_MODELS) {
+    const model = client.getGenerativeModel({
+      model: modelName,
+      systemInstruction,
     });
-    const response = await result.response;
-    const code = stripFences(response.text().trim());
+    try {
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: `Generate ${language} code for the following:\n\n${prompt}` }],
+          },
+        ],
+        generationConfig: { maxOutputTokens: 2048 },
+      });
+      const response = await result.response;
+      const code = stripFences(response.text().trim());
 
-    return NextResponse.json({ code });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Code generation failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json({ code, model: modelName });
+    } catch (error) {
+      lastError = error;
+      if (isModelUnavailableError(error) || isQuotaError(error)) continue;
+      break;
+    }
   }
+
+  const message =
+    lastError instanceof Error ? lastError.message : "Code generation failed";
+  return NextResponse.json({ error: message }, { status: 500 });
 }
 
 function stripFences(text: string): string {

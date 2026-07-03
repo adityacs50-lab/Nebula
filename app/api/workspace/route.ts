@@ -116,25 +116,29 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { data: workspace, error } = await supabase
-    .from("workspaces")
-    .insert({ name, created_by: user.id })
-    .select("id, name, updated_at")
-    .single();
+  // Generate the id client-side and insert WITHOUT .select(): reading the
+  // row back would be blocked by RLS (the select policy requires
+  // membership, and the membership row doesn't exist yet — chicken/egg).
+  const workspaceId = globalThis.crypto.randomUUID();
+  const createdAt = new Date().toISOString();
 
-  if (error || !workspace) {
+  const { error } = await supabase
+    .from("workspaces")
+    .insert({ id: workspaceId, name, created_by: user.id });
+
+  if (error) {
     if (isSupabaseMissingTableError(error)) {
       return NextResponse.json({ error: SUPABASE_SETUP_HINT }, { status: 503 });
     }
     return NextResponse.json(
-      { error: error?.message ?? "Failed to create workspace" },
+      { error: error.message ?? "Failed to create workspace" },
       { status: 500 },
     );
   }
 
   const { error: memberError } = await supabase
     .from("workspace_members")
-    .insert({ workspace_id: workspace.id, user_id: user.id, role: "owner" });
+    .insert({ workspace_id: workspaceId, user_id: user.id, role: "owner" });
 
   if (memberError) {
     return NextResponse.json({ error: memberError.message }, { status: 500 });
@@ -142,10 +146,10 @@ export async function POST(req: Request): Promise<Response> {
 
   return NextResponse.json({
     workspace: {
-      id: workspace.id as string,
-      name: workspace.name as string,
+      id: workspaceId,
+      name,
       membersCount: 1,
-      lastActive: workspace.updated_at as string,
+      lastActive: createdAt,
     },
   });
 }

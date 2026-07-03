@@ -55,6 +55,7 @@ function DashboardContent() {
   const [inviteFor, setInviteFor] = useState<WorkspaceSummary | null>(null);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -83,6 +84,7 @@ function DashboardContent() {
 
   async function handleCreate() {
     setCreating(true);
+    setCreateError(null);
     try {
       const res = await fetch("/api/workspace", {
         method: "POST",
@@ -93,12 +95,18 @@ function DashboardContent() {
         workspace?: { id: string };
         error?: string;
       };
-      if (payload.workspace) {
-        router.push(`/workspace/${payload.workspace.id}`);
+      if (!res.ok || !payload.workspace) {
+        throw new Error(payload.error ?? `Failed to create workspace (${res.status})`);
       }
+      setCreateOpen(false);
+      router.push(`/workspace/${payload.workspace.id}`);
+    } catch (err) {
+      // Keep the modal open so the user actually sees what went wrong
+      setCreateError(
+        err instanceof Error ? err.message : "Failed to create workspace",
+      );
     } finally {
       setCreating(false);
-      setCreateOpen(false);
     }
   }
 
@@ -278,6 +286,7 @@ function DashboardContent() {
             onChange={(e) => setNewName(e.target.value)}
             autoFocus
           />
+          {createError && <p className="text-xs text-error">{createError}</p>}
           <Button loading={creating} onClick={() => void handleCreate()}>
             Create and open canvas
           </Button>

@@ -3,7 +3,10 @@ import type { GenerationConfig } from "@google/generative-ai";
 import {
   geminiConfigured,
   GEMINI_IMAGE_MODELS,
+  GEMINI_QUOTA_HINT,
   getGeminiClient,
+  isModelUnavailableError,
+  isQuotaError,
 } from "@/lib/claude/client";
 
 export const runtime = "nodejs";
@@ -22,16 +25,6 @@ type ImageRequestBody = {
 type ImageGenerationConfig = GenerationConfig & {
   responseModalities?: string[];
 };
-
-function isModelUnavailableError(error: unknown): boolean {
-  const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-  return (
-    message.includes("404") ||
-    message.includes("not found") ||
-    message.includes("not supported")
-  );
-}
 
 export async function POST(req: Request): Promise<Response> {
   if (!geminiConfigured()) {
@@ -88,12 +81,16 @@ export async function POST(req: Request): Promise<Response> {
       return NextResponse.json({ imageUrl: dataUrl, model: modelName });
     } catch (error) {
       lastError = error;
-      // Model retired/renamed on this API version — try the next one.
-      if (isModelUnavailableError(error)) continue;
+      // Model retired/renamed, or this key has zero quota for it (free
+      // tier gives some image models limit: 0) — try the next one.
+      if (isModelUnavailableError(error) || isQuotaError(error)) continue;
       break;
     }
   }
 
+  if (isQuotaError(lastError)) {
+    return NextResponse.json({ error: GEMINI_QUOTA_HINT }, { status: 429 });
+  }
   const message =
     lastError instanceof Error ? lastError.message : "Image generation failed";
   return NextResponse.json({ error: message }, { status: 500 });

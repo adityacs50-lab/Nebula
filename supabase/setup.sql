@@ -1,7 +1,7 @@
 -- Nebula — one-shot database setup.
 -- Paste this whole file into Supabase → SQL Editor → Run.
 -- Idempotent: safe to run again on a project that already has the schema.
--- (Equivalent to migrations 001 + 002.)
+-- (Equivalent to migrations 001 + 002 + 003.)
 
 -- Workspaces
 create table if not exists workspaces (
@@ -85,6 +85,12 @@ create policy "workspace_members_select" on workspaces
 drop policy if exists "workspaces_insert" on workspaces;
 create policy "workspaces_insert" on workspaces
   for insert with check (created_by = auth.uid());
+
+-- Creators can always read their own workspaces (needed at creation time,
+-- before their membership row exists)
+drop policy if exists "workspaces_select_own" on workspaces;
+create policy "workspaces_select_own" on workspaces
+  for select using (created_by = auth.uid());
 
 drop policy if exists "memberships_select" on workspace_members;
 create policy "memberships_select" on workspace_members
