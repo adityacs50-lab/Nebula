@@ -175,3 +175,37 @@ section[id],
 div[id] {
   scroll-margin-top: 96px;
 }
+
+/* Rotating conic border for the pricing card */
+@property --nebula-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes nebula-border-spin {
+  to {
+    --nebula-angle: 360deg;
+  }
+}
+.nebula-rotating-border {
+  animation: nebula-border-spin 6s linear infinite;
+}
+
+/* Pulse glow for the final CTA button */
+@keyframes nebula-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 24px rgba(124, 58, 237, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 44px rgba(124, 58, 237, 0.6);
+  }
+}
+.animate-pulse-glow {
+  animation: nebula-pulse-glow 2.6s ease-in-out infinite;
+}
+
+/* Hide the native cursor once the branded one is active */
+.has-custom-cursor,
+.has-custom-cursor * {
+  cursor: none !important;
+}

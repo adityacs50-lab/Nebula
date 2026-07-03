@@ -1,381 +1,307 @@
 "use client";
 
-import { useState, useRef, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import {
   motion,
-  AnimatePresence,
   useMotionValue,
   useSpring,
+  useTransform,
   useMotionTemplate,
+  type MotionValue,
 } from "framer-motion";
-import {
-  ArrowRight,
-  Play,
-  MessageSquare,
-  Code2,
-  GitBranch,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { GradientButton, OutlineButton, L, CURSOR_TEAM } from "./landing-ui";
+import { ArrowRight, MessageSquare, Code2, GitBranch } from "lucide-react";
+import { L, CURSOR_TEAM } from "./landing-ui";
+import { Magnetic } from "./interactions";
 
-const NebulaScene = dynamic(() => import("./NebulaScene"), {
-  ssr: false,
-  loading: () => null,
-});
-
-const HEADLINE_TOP = ["The", "shared"];
-const HEADLINE_GRADIENT = ["AI", "brain"];
-const HEADLINE_BOTTOM = ["for", "founding", "teams."];
-
+/**
+ * Editorial split hero. Left: oversized headline mixing thin + bold
+ * weights. Right: a product mockup that parallaxes to the cursor — the
+ * "you're already in Nebula" moment. Moving the mouse nudges the card,
+ * shifts the glow, and pushes the three teammate cursors, each at a
+ * different rate.
+ */
 export function Hero() {
-  const [demoOpen, setDemoOpen] = useState(false);
-  let wordIndex = 0;
-  const word = (w: string, gradient = false) => {
-    const i = wordIndex++;
-    return (
-      <motion.span
-        key={`${w}-${i}`}
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.15 + i * 0.09, ease: "easeOut" }}
-        className={`inline-block ${
-          gradient
-            ? "bg-clip-text text-transparent"
-            : "text-white"
-        }`}
-        style={gradient ? { backgroundImage: L.gradient } : undefined}
-      >
-        {w}&nbsp;
-      </motion.span>
-    );
-  };
+  const section = useRef<HTMLElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 90, damping: 18 });
+  const sy = useSpring(my, { stiffness: 90, damping: 18 });
+
+  const [glow, setGlow] = useState({ x: 50, y: 45 });
+
+  const cardX = useMotionValue(0);
+  const cardY = useMotionValue(0);
+  const rotX = useSpring(useMotionValue(0), { stiffness: 120, damping: 18 });
+  const rotY = useSpring(useMotionValue(0), { stiffness: 120, damping: 18 });
+  const scardX = useSpring(cardX, { stiffness: 120, damping: 18 });
+  const scardY = useSpring(cardY, { stiffness: 120, damping: 18 });
+
+  function onMove(e: MouseEvent<HTMLElement>) {
+    const rect = section.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    mx.set(px);
+    my.set(py);
+    cardX.set(px * 26);
+    cardY.set(py * 22);
+    rotY.set(px * 8);
+    rotX.set(-py * 6);
+    setGlow({ x: 50 + px * 40, y: 45 + py * 40 });
+  }
+
+  const glowBg = useMotionTemplate`radial-gradient(45% 45% at ${glow.x}% ${glow.y}%, rgba(124,58,237,0.4), transparent 70%)`;
 
   return (
-    <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden pb-20 pt-32">
-      {/* Galaxy backdrop */}
-      <div className="absolute inset-0 opacity-80">
-        <NebulaScene />
-      </div>
+    <section
+      ref={section}
+      onMouseMove={onMove}
+      className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-16 pt-32 md:px-10 md:pt-28"
+    >
+      {/* ambient corner glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 75% 55% at 50% 40%, transparent 25%, #0A0A0A 100%)",
-        }}
+        className="pointer-events-none absolute -right-40 -top-40 h-[560px] w-[560px] rounded-full opacity-40 blur-[120px]"
+        style={{ background: "rgba(124,58,237,0.28)" }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-5 text-center md:px-6">
-        {/* Headline, word by word */}
-        <h1 className="mx-auto max-w-4xl text-[48px] font-bold leading-[1.04] tracking-tight md:text-[80px]">
-          <span className="block">
-            {HEADLINE_TOP.map((w) => word(w))}
-            {HEADLINE_GRADIENT.map((w) => word(w, true))}
-          </span>
-          <span className="block">{HEADLINE_BOTTOM.map((w) => word(w))}</span>
-        </h1>
-
-        {/* Subheadline */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7, delay: 0.8 }}
-          className="mx-auto mt-7 max-w-[600px] text-lg leading-relaxed md:text-xl"
-          style={{ color: L.text2 }}
-        >
-          Your co-founder is on ChatGPT. You&apos;re on Claude. Your third is
-          on Gemini. Nobody knows what the AI told who.{" "}
-          <span className="text-white">Nebula fixes that.</span>
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1, type: "spring", stiffness: 200, damping: 16 }}
-          className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
-          <Link href="/auth/signup">
-            <GradientButton className="!px-8 !py-3.5 !text-base">
-              Start for free
-              <ArrowRight size={17} />
-            </GradientButton>
-          </Link>
-          <OutlineButton
-            className="!px-8 !py-3.5 !text-base"
-            onClick={() => setDemoOpen(true)}
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-16 lg:grid-cols-[1.15fr_1fr]">
+        {/* ── Left: headline ── */}
+        <div>
+          <motion.h1
+            initial="hidden"
+            animate="show"
+            variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+            className="text-[clamp(3rem,9vw,6rem)] leading-[0.95] tracking-[-0.03em] text-white"
           >
-            <Play size={15} />
-            Watch demo
-          </OutlineButton>
-        </motion.div>
+            <HeadingLine>
+              <span className="font-thin">The</span>
+            </HeadingLine>
+            <HeadingLine>
+              <span
+                className="bg-clip-text font-bold text-transparent"
+                style={{ backgroundImage: L.gradient }}
+              >
+                shared
+              </span>
+            </HeadingLine>
+            <HeadingLine>
+              <span className="font-thin">AI brain</span>
+            </HeadingLine>
+            <HeadingLine>
+              <span className="font-bold">for founders.</span>
+            </HeadingLine>
+          </motion.h1>
 
-        {/* Social proof */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.15, duration: 0.6 }}
-          className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs"
-          style={{ color: L.text2 }}
-        >
-          {[
-            "Trusted by 500+ founding teams",
-            "Set up in 2 minutes",
-            "$49/month flat",
-          ].map((item) => (
-            <span key={item} className="flex items-center gap-1.5">
-              <Sparkles size={11} style={{ color: L.primary }} />
-              {item}
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="mt-8 max-w-[380px] text-base leading-relaxed"
+            style={{ color: "#666" }}
+          >
+            Three co-founders. Three AI tools. Zero shared context.
+            <br />
+            <br />
+            <span className="text-white/80">
+              Nebula puts your whole team on one canvas, one AI.
             </span>
-          ))}
-        </motion.div>
+          </motion.p>
 
-        {/* Workspace canvas */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65, duration: 0.6 }}
+            className="mt-10 flex items-center gap-7"
+          >
+            <Magnetic strength={0.4}>
+              <Link href="/auth/signup">
+                <span
+                  className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-white"
+                  style={{
+                    background: L.gradient,
+                    boxShadow: "0 0 30px rgba(124,58,237,0.35)",
+                  }}
+                >
+                  Start free
+                </span>
+              </Link>
+            </Magnetic>
+            <a
+              href="#product"
+              className="group inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+            >
+              See it live
+              <ArrowRight
+                size={15}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </a>
+          </motion.div>
+        </div>
+
+        {/* ── Right: parallax product mockup ── */}
         <motion.div
-          initial={{ opacity: 0, y: 56 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 1.2, ease: "easeOut" }}
-          className="relative mx-auto mt-16 max-w-4xl"
+          transition={{ delay: 0.35, duration: 0.9, ease: "easeOut" }}
+          className="relative"
+          style={{ perspective: 1200 }}
         >
-          <div
+          <motion.div
             aria-hidden
-            className="absolute -inset-12 -z-10"
-            style={{
-              background:
-                "radial-gradient(55% 55% at 50% 50%, rgba(124,58,237,0.32), transparent 70%)",
-            }}
+            className="pointer-events-none absolute -inset-16 -z-10"
+            style={{ background: glowBg }}
           />
-          <WorkspaceCanvas />
+          <motion.div
+            style={{
+              x: scardX,
+              y: scardY,
+              rotateX: rotX,
+              rotateY: rotY,
+              transformStyle: "preserve-3d",
+            }}
+            className="rotate-[-4deg]"
+          >
+            <ProductMock sx={sx} sy={sy} />
+          </motion.div>
         </motion.div>
       </div>
-
-      {/* Demo modal */}
-      <AnimatePresence>
-        {demoOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-            onClick={() => setDemoOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={{ type: "spring", stiffness: 220, damping: 22 }}
-              className="relative w-full max-w-4xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setDemoOpen(false)}
-                aria-label="Close demo"
-                className="absolute -top-11 right-0 flex h-9 w-9 items-center justify-center rounded-xl border text-white"
-                style={{ borderColor: L.border, backgroundColor: L.surface }}
-              >
-                <X size={16} />
-              </button>
-              <WorkspaceCanvas large />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
 
-/* ── Animated workspace canvas ─────────────────────────────── */
+function HeadingLine({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block overflow-hidden">
+      <motion.span
+        variants={{
+          hidden: { y: "110%" },
+          show: { y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
+        }}
+        className="block"
+      >
+        {children}
+      </motion.span>
+    </span>
+  );
+}
 
-function WorkspaceCanvas({ large = false }: { large?: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const gridX = useSpring(useMotionValue(0), { stiffness: 60, damping: 20 });
-  const gridY = useSpring(useMotionValue(0), { stiffness: 60, damping: 20 });
-  const gridTransform = useMotionTemplate`translate(${gridX}px, ${gridY}px)`;
-
-  function onMouseMove(e: MouseEvent<HTMLDivElement>) {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    gridX.set(((e.clientX - rect.left) / rect.width - 0.5) * -10);
-    gridY.set(((e.clientY - rect.top) / rect.height - 0.5) * -10);
-  }
-
+function ProductMock({
+  sx,
+  sy,
+}: {
+  sx: MotionValue<number>;
+  sy: MotionValue<number>;
+}) {
   return (
     <div
-      ref={ref}
-      onMouseMove={onMouseMove}
-      className="relative overflow-hidden rounded-xl border"
+      className="relative overflow-hidden rounded-xl border shadow-2xl"
       style={{
         borderColor: "rgba(124,58,237,0.35)",
-        backgroundColor: "rgba(17,17,17,0.92)",
-        boxShadow: L.glow,
+        backgroundColor: "rgba(17,17,17,0.9)",
+        boxShadow: "0 40px 80px -20px rgba(0,0,0,0.8), 0 0 40px rgba(124,58,237,0.2)",
       }}
     >
-      {/* parallax dot grid */}
-      <motion.div
-        aria-hidden
-        className="absolute -inset-4"
-        style={{
-          transform: gridTransform,
-          backgroundImage: "radial-gradient(#242424 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-        }}
-      />
-      {/* center glow */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(45% 45% at 50% 50%, rgba(124,58,237,0.12), transparent 75%)",
-        }}
-      />
-
-      {/* connection lines */}
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        viewBox="0 0 100 100"
+        className="flex items-center gap-1.5 border-b px-3 py-2.5"
+        style={{ borderColor: L.border }}
       >
-        {[
-          "M 30 38 C 42 38, 46 52, 56 55",
-          "M 56 62 C 66 66, 70 50, 78 44",
-        ].map((d, i) => (
-          <motion.path
-            key={d}
-            d={d}
-            fill="none"
-            stroke="#7C3AED"
-            strokeWidth="0.4"
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity, delay: i * 0.7 }}
-          />
-        ))}
-      </svg>
-
-      <div
-        className={`relative grid gap-4 p-6 md:grid-cols-3 md:p-8 ${
-          large ? "md:p-12" : ""
-        }`}
-      >
-        <FloatingBlock
-          color="#7C3AED"
-          icon={<MessageSquare size={13} />}
-          title="AI Chat"
-          delay={0}
-          lines={[
-            "Maya: Help us decide between B2B and B2C",
-            "Nebula AI: Based on Sam's user flow, B2B fits…",
-          ]}
-        />
-        <FloatingBlock
-          color="#3B82F6"
-          icon={<Code2 size={13} />}
-          title="Generate Code"
-          delay={0.6}
-          mono
-          lines={["def onboard_team(team):", "    workspace = create()", "    return invite(team)"]}
-        />
-        <FloatingBlock
-          color="#F59E0B"
-          icon={<GitBranch size={13} />}
-          title="User Flow"
-          delay={1.2}
-          lines={["Start → Sign Up → Onboarding", "→ Canvas → Invite Team"]}
-        />
+        <span className="h-2 w-2 rounded-full" style={{ background: "#ff5f57" }} />
+        <span className="h-2 w-2 rounded-full" style={{ background: "#febc2e" }} />
+        <span className="h-2 w-2 rounded-full" style={{ background: "#28c840" }} />
+        <span className="ml-2 text-[10px]" style={{ color: "#666" }}>
+          Project Nebula — 3 online
+        </span>
       </div>
 
-      {/* five cursors on organic paths */}
-      <Cursor member={CURSOR_TEAM[0]} className="left-[16%] top-[28%]" path={[[0, 0], [34, -12], [12, 18], [0, 0]]} duration={8} delay={1.5} />
-      <Cursor member={CURSOR_TEAM[1]} className="left-[48%] top-[60%]" path={[[0, 0], [-22, -18], [26, 8], [0, 0]]} duration={9.5} delay={1.9} />
-      <Cursor member={CURSOR_TEAM[2]} className="left-[76%] top-[30%]" path={[[0, 0], [-30, 16], [10, -14], [0, 0]]} duration={8.6} delay={2.3} />
-      <Cursor member={CURSOR_TEAM[3]} className="left-[30%] top-[68%]" path={[[0, 0], [28, -10], [-14, -20], [0, 0]]} duration={10.4} delay={2.7} />
-      <Cursor member={CURSOR_TEAM[4]} className="left-[62%] top-[20%]" path={[[0, 0], [14, 22], [-24, 10], [0, 0]]} duration={9} delay={3.1} />
+      <div
+        className="relative p-4"
+        style={{
+          backgroundImage: "radial-gradient(#222 1px, transparent 1px)",
+          backgroundSize: "20px 20px",
+        }}
+      >
+        <div className="space-y-3">
+          <MockRow color="#7C3AED" icon={<MessageSquare size={11} />} title="AI Chat">
+            <p className="text-white/80">Maya: B2B or B2C for launch?</p>
+            <p style={{ color: "#666" }}>Nebula AI: Your flow targets teams — go B2B.</p>
+          </MockRow>
+          <MockRow color="#3B82F6" icon={<Code2 size={11} />} title="Generate Code" mono>
+            <p style={{ color: "#666" }}>def onboard(team):</p>
+            <p style={{ color: "#666" }}>&nbsp;&nbsp;return invite(team)</p>
+          </MockRow>
+          <MockRow color="#F59E0B" icon={<GitBranch size={11} />} title="User Flow">
+            <p style={{ color: "#666" }}>Sign up → Workspace → Invite</p>
+          </MockRow>
+        </div>
+
+        {/* teammate cursors that drift with the mouse, each differently */}
+        <FloatCursor member={CURSOR_TEAM[0]} sx={sx} sy={sy} depth={30} className="left-[22%] top-[28%]" />
+        <FloatCursor member={CURSOR_TEAM[1]} sx={sx} sy={sy} depth={-22} className="left-[64%] top-[54%]" />
+        <FloatCursor member={CURSOR_TEAM[2]} sx={sx} sy={sy} depth={16} className="left-[46%] top-[76%]" />
+      </div>
     </div>
   );
 }
 
-function FloatingBlock({
+function MockRow({
   color,
   icon,
   title,
-  lines,
+  children,
   mono,
-  delay,
 }: {
   color: string;
   icon: React.ReactNode;
   title: string;
-  lines: string[];
+  children: React.ReactNode;
   mono?: boolean;
-  delay: number;
 }) {
   return (
-    <motion.div
-      animate={{ y: [0, -4, 0, 4, 0] }}
-      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay }}
-      className="rounded-xl border text-left"
+    <div
+      className="rounded-xl border"
       style={{
         borderColor: L.border,
         borderLeft: `3px solid ${color}`,
-        backgroundColor: "rgba(10,10,10,0.92)",
+        backgroundColor: "rgba(10,10,10,0.9)",
       }}
     >
       <div
-        className="flex items-center gap-2 border-b px-3 py-2 text-xs font-medium text-white"
+        className="flex items-center gap-2 border-b px-3 py-1.5 text-[11px] font-medium text-white"
         style={{ borderColor: L.border }}
       >
         <span style={{ color }}>{icon}</span>
         {title}
       </div>
-      <div
-        className={`space-y-1.5 px-3 py-3 text-[11px] leading-relaxed ${
-          mono ? "font-mono" : ""
-        }`}
-        style={{ color: L.text2 }}
-      >
-        {lines.map((line) => (
-          <p key={line} className="truncate">
-            {line}
-          </p>
-        ))}
+      <div className={`space-y-0.5 px-3 py-2 text-[10px] leading-relaxed ${mono ? "font-mono" : ""}`}>
+        {children}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-export function Cursor({
+function FloatCursor({
   member,
+  sx,
+  sy,
+  depth,
   className,
-  path,
-  duration,
-  delay,
 }: {
   member: { name: string; color: string };
+  sx: MotionValue<number>;
+  sy: MotionValue<number>;
+  depth: number;
   className: string;
-  path: Array<[number, number]>;
-  duration: number;
-  delay: number;
 }) {
+  // sx/sy are normalized cursor offsets (-0.5..0.5); scale by depth so
+  // each teammate cursor drifts a different amount and direction.
+  const x = useTransform(sx, (v) => v * depth);
+  const y = useTransform(sy, (v) => v * depth);
   return (
-    <motion.div
-      className={`absolute z-10 ${className}`}
-      initial={{ opacity: 0 }}
-      animate={{
-        opacity: 1,
-        x: path.map((p) => p[0]),
-        y: path.map((p) => p[1]),
-      }}
-      transition={{
-        opacity: { duration: 0.4, delay },
-        x: { duration, repeat: Infinity, ease: "easeInOut", delay },
-        y: { duration, repeat: Infinity, ease: "easeInOut", delay },
-      }}
-    >
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+    <motion.div className={`absolute ${className}`} style={{ x, y }}>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
         <path
           d="M2 1.5L13.5 7L8 8.5L6 14L2 1.5Z"
           fill={member.color}
@@ -384,7 +310,7 @@ export function Cursor({
         />
       </svg>
       <span
-        className="ml-3 rounded-md px-2 py-0.5 text-[10px] font-medium text-white"
+        className="ml-3 rounded-md px-1.5 py-0.5 text-[9px] font-medium text-white"
         style={{ backgroundColor: member.color }}
       >
         {member.name}

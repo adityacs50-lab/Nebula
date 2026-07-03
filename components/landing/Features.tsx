@@ -1,6 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef, type ReactNode, type MouseEvent } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+} from "framer-motion";
 import {
   MessageSquare,
   Code2,
@@ -9,104 +14,165 @@ import {
   Plug,
   Network,
 } from "lucide-react";
-import { L, SectionHeading } from "./landing-ui";
+import { L } from "./landing-ui";
 
-const FEATURES = [
+type Feature = {
+  n: string;
+  title: string;
+  lines: string[];
+  color: string;
+  icon: ReactNode;
+  span: string;
+  from: number;
+};
+
+const FEATURES: Feature[] = [
   {
-    icon: <MessageSquare size={18} />,
-    color: "#7C3AED",
+    n: "01",
     title: "AI Chat",
-    body: "Ask anything. Everyone sees the answer. AI remembers the full conversation history of your team.",
+    lines: ["Ask anything as a team.", "Everyone sees the answer.", "AI remembers your full history."],
+    color: "#7C3AED",
+    icon: <MessageSquare size={16} />,
+    span: "md:col-span-3",
+    from: -1,
   },
   {
-    icon: <Code2 size={18} />,
-    color: "#3B82F6",
+    n: "02",
     title: "Generate Code",
-    body: "Describe what you need. Get production-ready code. In Python, TypeScript, Rust, Go — any language.",
+    lines: ["Describe it. Get production code.", "Python, TypeScript, Rust, Go.", "Syntax highlighted. Copy-ready."],
+    color: "#3B82F6",
+    icon: <Code2 size={16} />,
+    span: "md:col-span-2",
+    from: 1,
   },
   {
-    icon: <ImageIcon size={18} />,
-    color: "#EC4899",
+    n: "03",
     title: "AI Image",
-    body: "Describe a visual. Generate it instantly. Product mockups, diagrams, marketing assets — all on canvas.",
+    lines: ["Describe a visual. See it instantly.", "Product mockups. Diagrams. Assets.", "All on your shared canvas."],
+    color: "#EC4899",
+    icon: <ImageIcon size={16} />,
+    span: "md:col-span-2",
+    from: -1,
   },
   {
-    icon: <GitBranch size={18} />,
-    color: "#F59E0B",
+    n: "04",
     title: "User Flow",
-    body: "Map your product flow visually. Drag nodes, connect steps, share with your team instantly.",
+    lines: ["Map your product visually.", "Drag, connect, share instantly.", "Your whole team sees it live."],
+    color: "#F59E0B",
+    icon: <GitBranch size={16} />,
+    span: "md:col-span-3",
+    from: 1,
   },
   {
-    icon: <Plug size={18} />,
-    color: "#10B981",
+    n: "05",
     title: "API Integration",
-    body: "Generate, test, and document API integrations. TypeScript-first, copy-paste ready.",
+    lines: ["Generate, test, document.", "TypeScript-first. Copy-paste ready.", "No more Postman tab switching."],
+    color: "#10B981",
+    icon: <Plug size={16} />,
+    span: "md:col-span-3",
+    from: -1,
   },
   {
-    icon: <Network size={18} />,
-    color: "#06B6D4",
+    n: "06",
     title: "Mind Map",
-    body: "Brainstorm as a team. AI clusters your ideas. Connections emerge automatically.",
+    lines: ["Brainstorm as a team.", "AI clusters your ideas.", "Connections emerge automatically."],
+    color: "#06B6D4",
+    icon: <Network size={16} />,
+    span: "md:col-span-2",
+    from: 1,
   },
 ];
 
 export function Features() {
   return (
-    <section id="features" className="relative py-28">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[820px] -translate-x-1/2"
-        style={{
-          background:
-            "radial-gradient(50% 50% at 50% 0%, rgba(124,58,237,0.09), transparent 75%)",
-        }}
-      />
-      <div className="mx-auto max-w-6xl px-5 md:px-6">
-        <SectionHeading
-          eyebrow="Features"
-          title="Every tool your team needs. In one place."
-        />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <section id="features" className="relative py-28 md:py-32">
+      <div className="mx-auto max-w-7xl px-5 md:px-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-16 max-w-2xl text-[clamp(2rem,4.5vw,3rem)] font-thin leading-tight tracking-tight text-white"
+        >
+          Every tool your team needs.{" "}
+          <span className="font-bold">In one place.</span>
+        </motion.h2>
+
+        <div className="grid gap-5 md:grid-cols-5">
           {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: i * 0.05, ease: "easeOut" }}
-              whileHover={{ scale: 1.02, y: -4 }}
-              className="group rounded-xl border p-7 transition-shadow duration-300"
-              style={{
-                backgroundColor: L.surface,
-                borderColor: L.border,
-                borderLeft: `3px solid ${f.color}`,
-              }}
-            >
-              <div
-                className="mb-5 inline-flex rounded-xl p-2.5 transition-shadow duration-300"
-                style={{
-                  color: f.color,
-                  backgroundColor: `${f.color}14`,
-                  boxShadow: `0 0 0px ${f.color}00`,
-                }}
-              >
-                {f.icon}
-              </div>
-              <h3 className="mb-2.5 text-lg font-semibold text-white">
-                {f.title}
-              </h3>
-              <p className="text-sm leading-relaxed" style={{ color: L.text2 }}>
-                {f.body}
-              </p>
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                style={{ boxShadow: `0 0 32px ${f.color}22 inset` }}
-              />
-            </motion.div>
+            <TiltFeature key={f.n} feature={f} index={i} />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function TiltFeature({ feature, index }: { feature: Feature; index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rx = useSpring(useMotionValue(0), { stiffness: 150, damping: 18 });
+  const ry = useSpring(useMotionValue(0), { stiffness: 150, damping: 18 });
+
+  function onMove(e: MouseEvent<HTMLDivElement>) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    ry.set(((e.clientX - rect.left) / rect.width - 0.5) * 8);
+    rx.set(-((e.clientY - rect.top) / rect.height - 0.5) * 8);
+  }
+  function reset() {
+    rx.set(0);
+    ry.set(0);
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: feature.from * 40 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.55, delay: (index % 2) * 0.08, ease: "easeOut" }}
+      className={feature.span}
+      style={{ perspective: 1000 }}
+    >
+      <motion.div
+        ref={ref}
+        onMouseMove={onMove}
+        onMouseLeave={reset}
+        whileHover={{ y: -4 }}
+        style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
+        data-cursor-hover
+        className="group relative h-full overflow-hidden rounded-xl border p-7 transition-colors duration-300"
+      >
+        {/* top accent line */}
+        <span
+          className="absolute inset-x-0 top-0 h-0.5"
+          style={{ background: feature.color }}
+        />
+        <div
+          className="absolute inset-0 rounded-xl border transition-colors duration-300 group-hover:border-white/20"
+          style={{ borderColor: L.border, backgroundColor: L.surface }}
+        />
+        <div className="relative">
+          <div className="mb-6 flex items-start justify-between">
+            <span style={{ color: feature.color }}>{feature.icon}</span>
+            <span
+              className="font-mono text-sm transition-colors duration-300 group-hover:text-[#7C3AED]"
+              style={{ color: "#444" }}
+            >
+              {feature.n}
+            </span>
+          </div>
+          <h3 className="mb-3 text-2xl font-bold tracking-tight text-white">
+            {feature.title}
+          </h3>
+          <div className="space-y-1">
+            {feature.lines.map((line) => (
+              <p key={line} className="text-sm leading-relaxed" style={{ color: "#666" }}>
+                {line}
+              </p>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

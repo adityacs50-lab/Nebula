@@ -1,58 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Twitter, Linkedin, Github } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { L } from "./landing-ui";
 
 const COLUMNS = [
-  {
-    heading: "Product",
-    links: ["Features", "Pricing", "Changelog"],
-  },
-  {
-    heading: "Company",
-    links: ["About", "Blog", "Contact"],
-  },
-  {
-    heading: "Legal",
-    links: ["Privacy Policy", "Terms of Service"],
-  },
+  { heading: "Product", links: ["Features", "Pricing", "Changelog"] },
+  { heading: "Company", links: ["About", "Blog", "Contact"] },
+  { heading: "Legal", links: ["Privacy", "Terms"] },
 ];
 
 export function Footer() {
   return (
-    <footer id="footer" className="border-t py-14" style={{ borderColor: L.border }}>
-      <div className="mx-auto max-w-6xl px-5 md:px-6">
+    <footer id="footer" className="border-t py-16" style={{ borderColor: L.border }}>
+      <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="flex flex-col gap-12 md:flex-row md:justify-between">
           <div className="max-w-xs">
-            <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-2">
-                <Sparkles size={18} style={{ color: L.primary }} />
-                <span className="font-semibold text-white">Nebula</span>
-              </Link>
-              <div className="flex items-center gap-3 md:hidden">
-                <FooterSocial />
-              </div>
-            </div>
-            <p className="mt-3 text-sm" style={{ color: L.text2 }}>
+            <Link href="/" className="flex items-center gap-2" data-cursor-hover>
+              <Sparkles size={18} style={{ color: L.primary }} />
+              <span className="font-semibold text-white">Nebula</span>
+            </Link>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: "#666" }}>
               The shared AI brain for founding teams.
             </p>
+            <div className="mt-6 flex flex-col gap-2 text-sm" style={{ color: "#666" }}>
+              {["Twitter", "LinkedIn", "GitHub"].map((s) => (
+                <a key={s} href="#" data-cursor-hover className="transition-colors hover:text-white">
+                  {s}
+                </a>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-10 sm:gap-16">
             {COLUMNS.map((col) => (
               <div key={col.heading}>
-                <h4 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: L.text3 }}>
+                <h4 className="mb-4 text-xs uppercase tracking-widest" style={{ color: "#444" }}>
                   {col.heading}
                 </h4>
                 <ul className="space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link}>
-                      <a
-                        href="#"
-                        className="text-sm transition-colors hover:text-white"
-                        style={{ color: L.text2 }}
-                      >
+                      <a href="#" data-cursor-hover className="text-sm transition-colors hover:text-white" style={{ color: "#666" }}>
                         {link}
                       </a>
                     </li>
@@ -61,41 +50,12 @@ export function Footer() {
               </div>
             ))}
           </div>
-
-          <div className="hidden items-start gap-3 md:flex">
-            <FooterSocial />
-          </div>
         </div>
 
-        <div
-          className="mt-12 border-t pt-6 text-center text-xs"
-          style={{ borderColor: L.border, color: L.text3 }}
-        >
-          © {new Date().getFullYear()} Nebula. Built for founders who build.
+        <div className="mt-14 flex flex-col gap-2 border-t pt-6 text-xs md:flex-row md:justify-between" style={{ borderColor: L.border, color: "#444" }}>
+          <span>© {new Date().getFullYear()} Nebula. Built for founders who build.</span>
         </div>
       </div>
     </footer>
-  );
-}
-
-function FooterSocial() {
-  return (
-    <>
-      {[
-        { icon: <Twitter size={15} />, label: "Twitter" },
-        { icon: <Linkedin size={15} />, label: "LinkedIn" },
-        { icon: <Github size={15} />, label: "GitHub" },
-      ].map((s) => (
-        <a
-          key={s.label}
-          href="#"
-          aria-label={s.label}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors hover:border-white/40 hover:text-white"
-          style={{ borderColor: L.border, color: L.text2 }}
-        >
-          {s.icon}
-        </a>
-      ))}
-    </>
   );
 }

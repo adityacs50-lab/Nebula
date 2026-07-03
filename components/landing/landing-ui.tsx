@@ -76,6 +76,53 @@ export const fadeUp = {
   transition: { duration: 0.6, ease: "easeOut" },
 } as const;
 
+/** A looping teammate cursor for the product mockups. */
+export function TeamCursor({
+  member,
+  className,
+  path,
+  duration,
+  delay = 0,
+}: {
+  member: { name: string; color: string };
+  className: string;
+  path: Array<[number, number]>;
+  duration: number;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      className={`absolute z-10 ${className}`}
+      initial={{ opacity: 0 }}
+      animate={{
+        opacity: 1,
+        x: path.map((p) => p[0]),
+        y: path.map((p) => p[1]),
+      }}
+      transition={{
+        opacity: { duration: 0.4, delay },
+        x: { duration, repeat: Infinity, ease: "easeInOut", delay },
+        y: { duration, repeat: Infinity, ease: "easeInOut", delay },
+      }}
+    >
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path
+          d="M2 1.5L13.5 7L8 8.5L6 14L2 1.5Z"
+          fill={member.color}
+          stroke="#0A0A0A"
+          strokeWidth="1"
+        />
+      </svg>
+      <span
+        className="ml-3 rounded-md px-2 py-0.5 text-[10px] font-medium text-white"
+        style={{ backgroundColor: member.color }}
+      >
+        {member.name}
+      </span>
+    </motion.div>
+  );
+}
+
 export function SectionHeading({
   eyebrow,
   title,
