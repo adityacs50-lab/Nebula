@@ -51,6 +51,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const client = getGeminiClient();
   let lastError: unknown = null;
+  let sawQuotaError = false;
 
   for (const modelName of GEMINI_IMAGE_MODELS) {
     const model = client.getGenerativeModel({ model: modelName });
@@ -83,12 +84,18 @@ export async function POST(req: Request): Promise<Response> {
       lastError = error;
       // Model retired/renamed, or this key has zero quota for it (free
       // tier gives some image models limit: 0) — try the next one.
-      if (isModelUnavailableError(error) || isQuotaError(error)) continue;
+      if (isQuotaError(error)) {
+        sawQuotaError = true;
+        continue;
+      }
+      if (isModelUnavailableError(error)) continue;
       break;
     }
   }
 
-  if (isQuotaError(lastError)) {
+  // A quota block anywhere in the chain is the real story — the trailing
+  // 404s from legacy model ids are just noise.
+  if (sawQuotaError || isQuotaError(lastError)) {
     return NextResponse.json({ error: GEMINI_QUOTA_HINT }, { status: 429 });
   }
   const message =

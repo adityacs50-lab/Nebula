@@ -22,6 +22,25 @@ const DEMO_WORKSPACE_HINT =
   "You're on the demo canvas, which isn't a real workspace in the database. Create a workspace from the dashboard, open it, then share that one.";
 
 /**
+ * Build invite URLs from the host the user is actually browsing on
+ * (x-forwarded-* on Vercel/proxies, Host locally), so deployed apps hand
+ * out production links with zero config. NEXT_PUBLIC_APP_URL is the
+ * fallback for exotic setups where the request host can't be trusted.
+ */
+function resolveOrigin(req: Request): string {
+  const requestUrl = new URL(req.url);
+  const proto =
+    req.headers.get("x-forwarded-proto") ??
+    requestUrl.protocol.replace(":", "");
+  const host =
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    requestUrl.host;
+  if (host) return `${proto}://${host}`;
+  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
+
+/**
  * Creates an invite link for a workspace. The insert runs through the
  * caller's own session (not the admin client), so Postgres RLS enforces
  * that only existing workspace members can mint invites — see
@@ -43,7 +62,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = resolveOrigin(req);
 
   if (!supabaseServerConfigured() || !(await supabaseApiKeyAvailable())) {
     const token = generateId("invite");
