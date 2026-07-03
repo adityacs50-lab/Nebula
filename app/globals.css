@@ -170,10 +170,7 @@ body {
   animation: nebula-float 7s ease-in-out infinite;
 }
 
-/* Smooth anchor scrolling that clears the fixed landing nav */
-html {
-  scroll-behavior: smooth;
-}
+/* Anchor offset for the fixed landing nav (Lenis drives the easing) */
 section[id],
 div[id] {
   scroll-margin-top: 96px;
