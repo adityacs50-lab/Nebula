@@ -52,9 +52,9 @@ cp .env.local.example .env.local
 
 ### 3. Database schema
 
-Apply the migration in `supabase/migrations/001_initial.sql`:
+Apply the migrations in `supabase/migrations/`, in order (`001_initial.sql` then `002_workspace_members_unique.sql`):
 
-- **Option A (dashboard):** open your Supabase project → SQL Editor → paste the file → Run.
+- **Option A (dashboard):** open your Supabase project → SQL Editor → paste each file → Run.
 - **Option B (CLI):**
   ```bash
   npx supabase login
@@ -62,7 +62,9 @@ Apply the migration in `supabase/migrations/001_initial.sql`:
   npx supabase db push
   ```
 
-This creates `workspaces`, `workspace_members`, `blocks`, `connections`, and `invites` with row-level security so users only see workspaces they belong to.
+This creates `workspaces`, `workspace_members`, `blocks`, `connections`, and `invites` with row-level security so users only see workspaces they belong to, plus a uniqueness constraint on `workspace_members(workspace_id, user_id)` so re-opening an invite link never creates a duplicate membership row.
+
+**Invite links** (`Share → Invite teammates` in the canvas topbar, or `/api/workspace/invite`) mint a row in `invites` with a random `token` and a 7-day `expires_at`, scoped by RLS so only existing workspace members can create one. Opening `/invite/[token]` verifies the token with the **service role** key (`SUPABASE_SERVICE_ROLE_KEY`) — the invitee isn't a workspace member yet, so the normal RLS-scoped client can't see the invite row — then adds them to `workspace_members` and redirects to the canvas. Invalid, expired, or already-used-by-someone-else tokens render an error page instead of redirecting.
 
 ### 4. Run
 

@@ -106,8 +106,8 @@ function DashboardContent() {
     setInviteFor(workspace);
     setInviteUrl(null);
     setCopied(false);
-    const res = await fetch("/api/workspace", {
-      method: "PATCH",
+    const res = await fetch("/api/workspace/invite", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ workspaceId: workspace.id }),
     });

@@ -12,7 +12,7 @@ import {
 } from "@/lib/supabase/config";
 import { GoogleIcon } from "./LoginForm";
 
-export function SignupForm() {
+export function SignupForm({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter();
   const { signUp, signInWithGoogle, configured } = useAuth();
   const [name, setName] = useState("");
@@ -59,7 +59,13 @@ export function SignupForm() {
           markSupabaseApiKeyInvalid();
         }
       }
-      // After signup → create first workspace → redirect to canvas
+      if (redirectTo) {
+        // Came from an invite link — let it redeem the token instead of
+        // spinning up a brand new workspace.
+        router.push(redirectTo);
+        return;
+      }
+      // Normal signup → create first workspace → redirect to canvas
       const workspaceId = await createFirstWorkspace().catch(() => "demo");
       router.push(`/workspace/${workspaceId}`);
     } catch (err) {
@@ -71,15 +77,15 @@ export function SignupForm() {
   async function handleGoogle() {
     setError(null);
     if (!configured) {
-      router.push("/workspace/demo");
+      router.push(redirectTo || "/workspace/demo");
       return;
     }
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(redirectTo || "/dashboard");
     } catch (err) {
       if (isSupabaseInvalidApiKeyError(err)) {
         markSupabaseApiKeyInvalid();
-        router.push("/workspace/demo");
+        router.push(redirectTo || "/workspace/demo");
         return;
       }
       setError(err instanceof Error ? err.message : "Google sign-up failed");

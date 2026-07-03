@@ -1,69 +1,91 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Check, Copy, Link2 } from "lucide-react";
+import { ChevronDown, Loader2, UserPlus } from "lucide-react";
 import { MenuDropdown } from "@/components/ui/Dropdown";
 import { Presence } from "@/components/multiplayer/Presence";
 import { Button } from "@/components/ui/Button";
+import { Toast } from "@/components/ui/Toast";
 
 export function ShareButton({ workspaceId }: { workspaceId: string }) {
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toastOpen, setToastOpen] = useState(false);
 
-  async function generateInvite() {
-    if (inviteUrl || loading) return;
+  async function handleInviteTeammates() {
+    if (loading) return;
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/workspace", {
-        method: "PATCH",
+      const res = await fetch("/api/workspace/invite", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspaceId }),
       });
-      const payload = (await res.json()) as { inviteUrl?: string };
-      setInviteUrl(payload.inviteUrl ?? null);
+      const payload = (await res.json()) as {
+        inviteUrl?: string;
+        error?: string;
+      };
+      if (!res.ok || !payload.inviteUrl) {
+        throw new Error(payload.error ?? "Failed to create invite link");
+      }
+      await navigator.clipboard.writeText(payload.inviteUrl);
+      setToastOpen(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to create invite link",
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function copy() {
-    if (!inviteUrl) return;
-    await navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
   return (
-    <MenuDropdown
-      trigger={
-        <Button size="sm" onClick={() => void generateInvite()}>
-          Share
-          <ChevronDown size={13} />
-        </Button>
-      }
-    >
-      <h3 className="mb-3 text-sm font-semibold">Share this canvas</h3>
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex h-8 flex-1 items-center gap-2 truncate rounded-lg border border-border bg-background px-2.5 font-mono text-[10px] text-text-secondary">
-          <Link2 size={11} className="shrink-0" />
-          <span className="truncate">
-            {loading ? "Generating link..." : (inviteUrl ?? "Invite link")}
-          </span>
-        </div>
+    <>
+      <MenuDropdown
+        trigger={
+          <Button size="sm">
+            Share
+            <ChevronDown size={13} />
+          </Button>
+        }
+      >
+        <h3 className="mb-3 text-sm font-semibold">Share this canvas</h3>
         <button
-          onClick={() => void copy()}
-          disabled={!inviteUrl}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
-          aria-label="Copy invite link"
+          onClick={() => void handleInviteTeammates()}
+          disabled={loading}
+          className="mb-4 flex w-full items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary/50 disabled:opacity-50"
         >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            {loading ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <UserPlus size={13} />
+            )}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-xs font-medium text-white">
+              Invite teammates
+            </span>
+            <span className="block truncate text-[10px] text-text-secondary">
+              {loading
+                ? "Generating link..."
+                : "Copy a link that adds them to this workspace"}
+            </span>
+          </span>
         </button>
-      </div>
-      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-        Online now
-      </h4>
-      <Presence />
-    </MenuDropdown>
+        {error && <p className="mb-3 text-[11px] text-error">{error}</p>}
+        <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+          Online now
+        </h4>
+        <Presence />
+      </MenuDropdown>
+
+      <Toast
+        message="Invite link copied!"
+        show={toastOpen}
+        onDone={() => setToastOpen(false)}
+      />
+    </>
   );
 }

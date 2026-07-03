@@ -2,10 +2,14 @@ const PLACEHOLDER_PARTS = ["your_", "placeholder", "example"];
 
 let apiKeyValid: boolean | null = null;
 
-function hasConfiguredValue(value: string | undefined): value is string {
+export function hasConfiguredValue(value: string | undefined): value is string {
   if (!value) return false;
   const normalized = value.trim().toLowerCase();
   return !PLACEHOLDER_PARTS.some((part) => normalized.includes(part));
+}
+
+export function getSupabaseServiceRoleKey(): string | undefined {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
 export function supabaseEnvConfigured(): boolean {

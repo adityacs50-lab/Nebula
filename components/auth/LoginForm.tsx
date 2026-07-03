@@ -11,7 +11,7 @@ import {
   markSupabaseApiKeyInvalid,
 } from "@/lib/supabase/config";
 
-export function LoginForm() {
+export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter();
   const { signIn, signInWithGoogle, configured } = useAuth();
   const [email, setEmail] = useState("");
@@ -19,22 +19,24 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const destination = redirectTo || "/dashboard";
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (!configured) {
       // Demo mode: Supabase isn't wired up yet, go straight to the app
-      router.push("/workspace/demo");
+      router.push(redirectTo || "/workspace/demo");
       return;
     }
     setLoading(true);
     try {
       await signIn(email, password);
-      router.push("/dashboard");
+      router.push(destination);
     } catch (err) {
       if (isSupabaseInvalidApiKeyError(err)) {
         markSupabaseApiKeyInvalid();
-        router.push("/workspace/demo");
+        router.push(redirectTo || "/workspace/demo");
         return;
       }
       setError(err instanceof Error ? err.message : "Failed to sign in");
@@ -46,15 +48,15 @@ export function LoginForm() {
   async function handleGoogle() {
     setError(null);
     if (!configured) {
-      router.push("/workspace/demo");
+      router.push(redirectTo || "/workspace/demo");
       return;
     }
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(destination);
     } catch (err) {
       if (isSupabaseInvalidApiKeyError(err)) {
         markSupabaseApiKeyInvalid();
-        router.push("/workspace/demo");
+        router.push(redirectTo || "/workspace/demo");
         return;
       }
       setError(err instanceof Error ? err.message : "Google sign-in failed");

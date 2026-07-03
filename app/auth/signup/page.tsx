@@ -6,7 +6,11 @@ export const metadata = {
   title: "Sign up — Nebula",
 };
 
-export default function SignupPage() {
+export default function SignupPage({
+  searchParams,
+}: {
+  searchParams: { redirect_to?: string };
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
@@ -22,7 +26,7 @@ export default function SignupPage() {
           <p className="mb-6 text-sm text-text-secondary">
             Get your founding team on one shared AI canvas.
           </p>
-          <SignupForm />
+          <SignupForm redirectTo={searchParams.redirect_to} />
         </div>
       </div>
     </div>
