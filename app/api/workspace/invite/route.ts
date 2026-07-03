@@ -15,6 +15,12 @@ type InviteRequestBody = {
   workspaceId?: string;
 };
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const DEMO_WORKSPACE_HINT =
+  "You're on the demo canvas, which isn't a real workspace in the database. Create a workspace from the dashboard, open it, then share that one.";
+
 /**
  * Creates an invite link for a workspace. The insert runs through the
  * caller's own session (not the admin client), so Postgres RLS enforces
@@ -62,6 +68,12 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Supabase is live, but "demo" (or anything non-UUID) isn't a real
+  // workspace row — inserting it would fail with a Postgres uuid error.
+  if (!UUID_RE.test(workspaceId)) {
+    return NextResponse.json({ error: DEMO_WORKSPACE_HINT }, { status: 400 });
   }
 
   const { data: invite, error } = await supabase

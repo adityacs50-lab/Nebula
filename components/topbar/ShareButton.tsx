@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Loader2, UserPlus } from "lucide-react";
 import { MenuDropdown } from "@/components/ui/Dropdown";
 import { Presence } from "@/components/multiplayer/Presence";
@@ -74,7 +75,19 @@ export function ShareButton({ workspaceId }: { workspaceId: string }) {
             </span>
           </span>
         </button>
-        {error && <p className="mb-3 text-[11px] text-error">{error}</p>}
+        {error && (
+          <div className="mb-3">
+            <p className="text-[11px] text-error">{error}</p>
+            {error.includes("demo canvas") && (
+              <Link
+                href="/dashboard"
+                className="mt-1.5 inline-block text-[11px] font-medium text-primary hover:underline"
+              >
+                Create a workspace →
+              </Link>
+            )}
+          </div>
+        )}
         <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
           Online now
         </h4>
