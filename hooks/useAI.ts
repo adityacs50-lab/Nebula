@@ -105,5 +105,18 @@ export function useAI(workspaceId: string) {
     [getCanvasContext],
   );
 
-  return { sendChat, generateCode, getCanvasContext };
+  const generateImage = useCallback(async (prompt: string): Promise<string> => {
+    const res = await fetch("/api/ai/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const payload = (await res.json()) as { imageUrl?: string; error?: string };
+    if (!res.ok || payload.error) {
+      throw new Error(payload.error ?? `AI request failed (${res.status})`);
+    }
+    return payload.imageUrl ?? "";
+  }, []);
+
+  return { sendChat, generateCode, generateImage, getCanvasContext };
 }

@@ -8,7 +8,7 @@ Your co-founder is on ChatGPT. You're on Gemini. Nobody knows what the AI told w
 
 - **Infinite multiplayer canvas** — react-flow canvas with live cursors, presence, and shared state via Liveblocks. Join with an invite link and you're in the same room.
 - **Canvas-aware AI** — every Gemini API call (`gemini-2.5-flash`) is injected with a live snapshot of the entire canvas (`lib/canvas/context.ts`), so the AI knows what every teammate is building right now.
-- **Six block types** — AI Chat (streaming), Generate Code (Gemini-powered, syntax highlighted), AI Image, User Flow (nested react-flow), API Integration, and Mind Map.
+- **Six block types** — AI Chat (streaming, markdown-rendered), Generate Code (Gemini-powered, syntax highlighted), AI Image (Gemini-powered generation), User Flow (nested react-flow), API Integration, and Mind Map.
 - **Auth + persistence** — Supabase auth (email/password + Google OAuth), workspaces, members, invites, and RLS policies.
 
 ## Tech stack

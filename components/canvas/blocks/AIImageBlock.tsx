@@ -1,53 +1,58 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import type { NodeProps } from "reactflow";
-import { Check, Copy, Download, Maximize2, Wand2 } from "lucide-react";
+import { Check, Copy, Download, Loader2, Maximize2, Wand2 } from "lucide-react";
 import { BaseBlock } from "./BaseBlock";
 import type { BlockNodeData } from "@/lib/canvas/types";
 import { useBlocks } from "@/hooks/useBlocks";
+import { useAI } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
 
-const VARIATIONS = [
-  "/assets/placeholder-1.svg",
-  "/assets/placeholder-2.svg",
-  "/assets/placeholder-3.svg",
-  "/assets/placeholder-4.svg",
-];
+const MAX_HISTORY = 4;
 
-/**
- * Image generation block. Uses local placeholder art — real image
- * generation requires a separate image API, so we simulate the flow while
- * keeping prompt + selection in shared state.
- */
+/** Image generation block, backed by Gemini's image-capable model. */
 export function AIImageBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
   const { block } = data;
+  const params = useParams<{ id: string }>();
+  const workspaceId = params?.id ?? "demo";
   const { updateBlockData } = useBlocks();
+  const { generateImage } = useAI(workspaceId);
+
   const [prompt, setPrompt] = useState(block.data.prompt ?? "");
   const [generating, setGenerating] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const hasImage = typeof block.data.imageIndex === "number";
-  const activeIndex = block.data.imageIndex ?? 0;
-  const activeImage = VARIATIONS[activeIndex % VARIATIONS.length];
+  const images = block.data.images ?? [];
+  const hasImage = images.length > 0;
+  const activeIndex = Math.min(block.data.imageIndex ?? 0, images.length - 1);
+  const activeImage = hasImage ? images[activeIndex] : null;
 
-  function handleGenerate() {
+  async function handleGenerate() {
     if (!prompt.trim() || generating) return;
+    setError(null);
     setGenerating(true);
-    window.setTimeout(() => {
+    try {
+      const imageUrl = await generateImage(prompt.trim());
+      const nextImages = [imageUrl, ...images].slice(0, MAX_HISTORY);
       updateBlockData(id, {
         prompt: prompt.trim(),
-        imageIndex: Math.floor(Math.random() * VARIATIONS.length),
+        images: nextImages,
+        imageIndex: 0,
       });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image generation failed");
+    } finally {
       setGenerating(false);
-    }, 1200);
+    }
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(
-      `${window.location.origin}${activeImage}`,
-    );
+    if (!activeImage) return;
+    await navigator.clipboard.writeText(activeImage);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   }
@@ -66,18 +71,22 @@ export function AIImageBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleGenerate();
+              if (e.key === "Enter") void handleGenerate();
             }}
             placeholder="Describe an image..."
             className="nodrag h-8 flex-1 rounded-lg border border-border bg-background px-3 text-xs text-text-primary placeholder:text-text-secondary/60 focus:border-[#EC4899] focus:outline-none"
           />
           <button
-            onClick={handleGenerate}
+            onClick={() => void handleGenerate()}
             disabled={!prompt.trim() || generating}
             className="flex h-8 items-center gap-1.5 rounded-lg bg-[#EC4899] px-3 text-[11px] font-medium text-white transition-colors hover:bg-[#EC4899]/80 disabled:opacity-40"
           >
-            <Wand2 size={11} />
-            {generating ? "Dreaming..." : "Generate"}
+            {generating ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Wand2 size={11} />
+            )}
+            {generating ? "Generating..." : "Generate"}
           </button>
         </div>
 
@@ -87,7 +96,12 @@ export function AIImageBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
             expanded && "fixed inset-8 z-50",
           )}
         >
-          {hasImage ? (
+          {generating ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-text-secondary">
+              <Loader2 size={20} className="animate-spin text-[#EC4899]" />
+              Gemini is generating your image...
+            </div>
+          ) : activeImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={activeImage}
@@ -96,13 +110,13 @@ export function AIImageBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
             />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-text-secondary">
-              {generating ? "Generating variations..." : "Your image will appear here"}
+              Your image will appear here
             </div>
           )}
-          {hasImage && (
+          {activeImage && !generating && (
             <div className="absolute right-2 top-2 flex gap-1">
               <ImageAction label="Download">
-                <a href={activeImage} download="nebula-image.svg">
+                <a href={activeImage} download="nebula-image.png">
                   <Download size={11} />
                 </a>
               </ImageAction>
@@ -112,23 +126,25 @@ export function AIImageBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
               >
                 <Maximize2 size={11} />
               </ImageAction>
-              <ImageAction label="Copy link" onClick={() => void handleCopy()}>
+              <ImageAction label="Copy image data" onClick={() => void handleCopy()}>
                 {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
               </ImageAction>
             </div>
           )}
         </div>
 
-        {/* Thumbnail strip with variations */}
-        {hasImage && (
+        {error && <p className="shrink-0 text-[10px] text-error">{error}</p>}
+
+        {/* Thumbnail strip with generation history */}
+        {images.length > 1 && (
           <div className="flex shrink-0 gap-1.5">
-            {VARIATIONS.map((src, i) => (
+            {images.map((src, i) => (
               <button
-                key={src}
+                key={src.slice(0, 32) + i}
                 onClick={() => updateBlockData(id, { imageIndex: i })}
                 className={cn(
                   "h-10 w-14 overflow-hidden rounded-md border transition-all",
-                  i === activeIndex % VARIATIONS.length
+                  i === activeIndex
                     ? "border-[#EC4899]"
                     : "border-border opacity-60 hover:opacity-100",
                 )}

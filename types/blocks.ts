@@ -51,6 +51,7 @@ export type BlockData = {
   prompt?: string;
   code?: string;
   imageIndex?: number;
+  images?: string[];
   nodes?: FlowNode[];
   mindNodes?: MindMapNode[];
   minimized?: boolean;

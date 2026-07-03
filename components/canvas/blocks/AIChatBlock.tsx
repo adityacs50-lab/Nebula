@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import type { NodeProps } from "reactflow";
 import { Send, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { BaseBlock } from "./BaseBlock";
 import type { BlockNodeData } from "@/lib/canvas/types";
 import type { ChatMessage } from "@/types/blocks";
@@ -184,13 +186,87 @@ function MessageRow({
             {message.timestamp}
           </span>
         </div>
-        <p className="whitespace-pre-wrap text-xs leading-relaxed text-text-primary/90">
-          {message.content}
-          {streaming && (
-            <span className="ml-0.5 inline-block h-3 w-1.5 animate-blink bg-primary align-middle" />
-          )}
-        </p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap text-xs leading-relaxed text-text-primary/90">
+            {message.content}
+          </p>
+        ) : (
+          <div className="text-xs leading-relaxed text-text-primary/90">
+            <MarkdownContent content={message.content} />
+            {streaming && (
+              <span className="ml-0.5 inline-block h-3 w-1.5 animate-blink bg-primary align-middle" />
+            )}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Renders AI responses as proper markdown instead of raw asterisks/quotes. */
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => (
+          <p className="mb-1.5 last:mb-0">{children}</p>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-semibold text-white">{children}</strong>
+        ),
+        em: ({ children }) => <em className="italic">{children}</em>,
+        ul: ({ children }) => (
+          <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">
+            {children}
+          </ol>
+        ),
+        li: ({ children }) => <li>{children}</li>,
+        a: ({ children, href }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline underline-offset-2 hover:text-primary-hover"
+          >
+            {children}
+          </a>
+        ),
+        code: ({ children, className }) => {
+          const isBlock = Boolean(className);
+          return isBlock ? (
+            <code className="my-1.5 block overflow-x-auto rounded-md bg-background px-2.5 py-2 font-mono text-[11px] text-text-primary/90">
+              {children}
+            </code>
+          ) : (
+            <code className="rounded bg-background px-1 py-0.5 font-mono text-[11px] text-text-primary/90">
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children }) => <pre className="whitespace-pre-wrap">{children}</pre>,
+        h1: ({ children }) => (
+          <h1 className="mb-1.5 text-sm font-semibold text-white">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="mb-1.5 text-sm font-semibold text-white">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="mb-1 text-xs font-semibold text-white">{children}</h3>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="mb-1.5 border-l-2 border-border pl-2.5 text-text-secondary">
+            {children}
+          </blockquote>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   );
 }

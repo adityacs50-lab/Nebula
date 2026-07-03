@@ -77,7 +77,8 @@ Rules:
 }
 
 function stripFences(text: string): string {
-  const fence = /^```[a-zA-Z]*\n([\s\S]*?)\n```$/m;
-  const match = text.match(fence);
-  return match ? match[1] : text;
+  const trimmed = text.trim();
+  const fence = /^```[a-zA-Z0-9_-]*\r?\n([\s\S]*?)\r?\n?```$/;
+  const match = trimmed.match(fence);
+  return match ? match[1].trim() : trimmed;
 }
