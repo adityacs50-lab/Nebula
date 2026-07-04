@@ -13,17 +13,16 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Plus } from "lucide-react";
 import { AIChatBlock } from "./blocks/AIChatBlock";
-import { GenerateCodeBlock } from "./blocks/GenerateCodeBlock";
-import { AIImageBlock } from "./blocks/AIImageBlock";
-import { UserFlowBlock } from "./blocks/UserFlowBlock";
-import { APIIntegrationBlock } from "./blocks/APIIntegrationBlock";
-import { MindMapBlock } from "./blocks/MindMapBlock";
+import { CodeBlock } from "./blocks/CodeBlock";
+import { ResearchBlock } from "./blocks/ResearchBlock";
+import { TaskBlock } from "./blocks/TaskBlock";
+import { OutreachBlock } from "./blocks/OutreachBlock";
+import { NotesBlock } from "./blocks/NotesBlock";
 import { CanvasToolbar } from "./CanvasToolbar";
-import { MiniMap } from "./MiniMap";
 import { Cursors } from "@/components/multiplayer/Cursors";
 import { useBlocks } from "@/hooks/useBlocks";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
-import { useCanvasStore } from "@/store/canvasStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import {
   blockToNode,
   connectionToEdge,
@@ -34,56 +33,67 @@ import { BLOCK_COLORS, BLOCK_LABELS, type BlockType } from "@/types/blocks";
 
 const nodeTypes: NodeTypes = {
   "ai-chat": AIChatBlock,
-  "generate-code": GenerateCodeBlock,
-  "ai-image": AIImageBlock,
-  "user-flow": UserFlowBlock,
-  "api-integration": APIIntegrationBlock,
-  "mind-map": MindMapBlock,
+  code: CodeBlock,
+  research: ResearchBlock,
+  task: TaskBlock,
+  outreach: OutreachBlock,
+  notes: NotesBlock,
 };
 
 /**
- * The infinite multiplayer canvas. Must be rendered inside both a
- * Liveblocks <RoomProvider> and a <ReactFlowProvider> (the workspace page
- * provides both so the sidebar/topbar can share the same contexts).
+ * The personal-workspace canvas. Shows only the active member's blocks;
+ * locks all editing when you're visiting a teammate's workspace.
  */
 export function Canvas() {
   const {
     blocks,
+    visibleBlocks,
     connections,
+    readOnly,
     addBlock,
     updateBlockPosition,
     addConnection,
   } = useBlocks();
   const { moveCursor, setActiveBlock } = useMultiplayer();
   const { screenToFlowPosition } = useReactFlow();
-  const activeTool = useCanvasStore((s) => s.activeTool);
-  const selectedBlockId = useCanvasStore((s) => s.selectedBlockId);
-  const setSelectedBlockId = useCanvasStore((s) => s.setSelectedBlockId);
-  const setZoom = useCanvasStore((s) => s.setZoom);
-  const addMenu = useCanvasStore((s) => s.addMenu);
-  const openAddMenu = useCanvasStore((s) => s.openAddMenu);
-  const closeAddMenu = useCanvasStore((s) => s.closeAddMenu);
+  const activeTool = useWorkspaceStore((s) => s.activeTool);
+  const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId);
+  const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId);
+  const setZoom = useWorkspaceStore((s) => s.setZoom);
+  const addMenu = useWorkspaceStore((s) => s.addMenu);
+  const openAddMenu = useWorkspaceStore((s) => s.openAddMenu);
+  const closeAddMenu = useWorkspaceStore((s) => s.closeAddMenu);
 
   const nodes: BlockNode[] = useMemo(() => {
-    if (!blocks) return [];
-    return blocks.map((block) => {
+    return visibleBlocks.map((block) => {
       const node = blockToNode(JSON.parse(JSON.stringify(block)));
       node.selected = block.id === selectedBlockId;
+      if (readOnly) {
+        node.draggable = false;
+        node.connectable = false;
+      }
       return node;
     });
-  }, [blocks, selectedBlockId]);
+  }, [visibleBlocks, selectedBlockId, readOnly]);
+
+  const visibleIds = useMemo(
+    () => new Set(visibleBlocks.map((b) => b.id)),
+    [visibleBlocks],
+  );
 
   const edges: Edge[] = useMemo(() => {
     if (!connections) return [];
-    return connections.map((connection) =>
-      connectionToEdge(JSON.parse(JSON.stringify(connection))),
-    );
-  }, [connections]);
+    return connections
+      .filter((c) => visibleIds.has(c.source) && visibleIds.has(c.target))
+      .map((connection) =>
+        connectionToEdge(JSON.parse(JSON.stringify(connection))),
+      );
+  }, [connections, visibleIds]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       for (const change of changes) {
-        if (change.type === "position" && change.position) {
+        if (change.type === "position" && change.position && !readOnly) {
           updateBlockPosition(change.id, change.position);
         } else if (change.type === "select") {
           if (change.selected) setSelectedBlockId(change.id);
@@ -91,24 +101,22 @@ export function Canvas() {
         }
       }
     },
-    [updateBlockPosition, setSelectedBlockId, selectedBlockId],
+    [updateBlockPosition, setSelectedBlockId, selectedBlockId, readOnly],
   );
 
   const onConnect = useCallback(
     (connection: FlowConnection) => {
+      if (readOnly) return;
       if (connection.source && connection.target) {
         addConnection(connection.source, connection.target);
       }
     },
-    [addConnection],
+    [addConnection, readOnly],
   );
 
   const handlePointerMove = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      const flow = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+      const flow = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       moveCursor(flow);
     },
     [screenToFlowPosition, moveCursor],
@@ -118,18 +126,14 @@ export function Canvas() {
     (event: React.MouseEvent) => {
       setSelectedBlockId(null);
       setActiveBlock(null);
+      if (readOnly) return;
       if (addMenu.open) {
         closeAddMenu();
         return;
       }
-      const bounds = (
-        event.currentTarget as HTMLElement
-      ).getBoundingClientRect();
+      const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
       openAddMenu({
-        screen: {
-          x: event.clientX - bounds.left,
-          y: event.clientY - bounds.top,
-        },
+        screen: { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
         flow: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
       });
     },
@@ -140,6 +144,7 @@ export function Canvas() {
       setSelectedBlockId,
       setActiveBlock,
       screenToFlowPosition,
+      readOnly,
     ],
   );
 
@@ -159,15 +164,16 @@ export function Canvas() {
         onConnect={onConnect}
         onPaneClick={handlePaneClick}
         onMove={(_event, viewport) => setZoom(viewport.zoom)}
-        onNodeDragStart={(_event, node) => setActiveBlock(node.id)}
+        onNodeDragStart={(_event, node) => !readOnly && setActiveBlock(node.id)}
         onNodeClick={(_event, node) => setSelectedBlockId(node.id)}
-        // Smooth zoom on Ctrl+scroll, pan on scroll / Space+drag
         zoomOnScroll={false}
         panOnScroll
         zoomActivationKeyCode="Control"
         panActivationKeyCode="Space"
         panOnDrag={activeTool === "hand"}
-        selectionOnDrag={activeTool === "select"}
+        selectionOnDrag={activeTool === "select" && !readOnly}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
         minZoom={0.2}
         maxZoom={2.5}
         deleteKeyCode={null}
@@ -179,22 +185,22 @@ export function Canvas() {
           variant={BackgroundVariant.Dots}
           gap={22}
           size={1.2}
-          color="#2A2A2A"
+          className="!bg-background"
+          color="rgb(var(--border-strong))"
         />
-        <MiniMap />
       </ReactFlow>
 
       <Cursors />
-      <CanvasToolbar />
+      {!readOnly && <CanvasToolbar />}
 
       {/* Click-to-add block menu */}
-      {addMenu.open && (
+      {addMenu.open && !readOnly && (
         <div
           className="absolute z-30 -translate-x-1/2 -translate-y-2"
           style={{ left: addMenu.screen.x, top: addMenu.screen.y }}
         >
-          <div className="w-48 rounded-xl border border-border bg-surface p-1.5 shadow-card">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
+          <div className="w-44 rounded-lg border border-border bg-surface-hover p-1.5 shadow-card">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary">
               <Plus size={11} />
               Add block
             </div>
@@ -206,7 +212,7 @@ export function Canvas() {
                   closeAddMenu();
                   if (typeof id === "string") setSelectedBlockId(id);
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-text-primary transition-colors hover:bg-surface-hover"
+                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] text-text-primary transition-colors duration-100 hover:bg-surface"
               >
                 <span
                   className="h-2 w-2 rounded-sm"
@@ -219,17 +225,10 @@ export function Canvas() {
         </div>
       )}
 
-      {/* Storage loading overlay */}
       {loading && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-background/90">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
-          <p className="text-sm text-text-secondary">
-            Connecting to your team canvas...
-          </p>
-          <p className="max-w-xs text-center text-xs text-text-secondary/70">
-            If this never resolves, check that your Liveblocks keys are set in
-            .env.local (see README.md).
-          </p>
+          <span className="h-6 w-6 animate-spin rounded-full border-[1.5px] border-border border-t-primary" />
+          <p className="text-[13px] text-text-secondary">Connecting…</p>
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useReactFlow } from "reactflow";
-import { useCanvasStore } from "@/store/canvasStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useBlocks } from "./useBlocks";
 import type { BlockType } from "@/types/blocks";
 
@@ -13,7 +13,7 @@ import type { BlockType } from "@/types/blocks";
 export function useCanvas() {
   const { zoomIn, zoomOut, zoomTo, getZoom, screenToFlowPosition } =
     useReactFlow();
-  const store = useCanvasStore();
+  const store = useWorkspaceStore();
   const { addBlock } = useBlocks();
 
   const handleZoomIn = useCallback(() => {

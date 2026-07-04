@@ -6,7 +6,7 @@ import {
   isModelUnavailableError,
   isQuotaError,
 } from "@/lib/claude/client";
-import type { CanvasContext } from "@/lib/canvas/context";
+import type { TeamContext } from "@/lib/context/teamContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 type CodeRequestBody = {
   prompt: string;
   language: string;
-  canvasContext: CanvasContext;
+  teamContext: TeamContext;
 };
 
 export async function POST(req: Request): Promise<Response> {
@@ -35,7 +35,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { prompt, language, canvasContext } = body;
+  const { prompt, language, teamContext } = body;
   if (!prompt || !language) {
     return NextResponse.json(
       { error: "prompt and language are required" },
@@ -44,12 +44,12 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const client = getGeminiClient();
-  const systemInstruction = `You are the code generation engine inside Nebula — a shared AI workspace for founding teams.
+  const systemInstruction = `You are the code generation engine inside Nebula OS — the operating system for founding teams.
 
-You can see the team's entire canvas, so generated code should fit what they are already building.
+You can see everything the team is working on, so generated code should fit what they are already building.
 
-Current canvas state:
-${JSON.stringify(canvasContext, null, 2)}
+Team context:
+${JSON.stringify(teamContext, null, 2)}
 
 Rules:
 - Respond with ONLY the code, no prose, no explanations

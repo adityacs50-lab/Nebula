@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
 import type { NodeProps } from "reactflow";
 import { Send, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -11,22 +10,19 @@ import type { BlockNodeData } from "@/lib/canvas/types";
 import type { ChatMessage } from "@/types/blocks";
 import { useBlocks } from "@/hooks/useBlocks";
 import { useAI, type OutgoingChatMessage } from "@/hooks/useAI";
-import { useSelf } from "@/lib/liveblocks/config";
+import { useTeam } from "@/hooks/useTeam";
 import { formatTime, initials, cn } from "@/lib/utils";
 
 /**
- * Full multiplayer chat with Gemini. Every request carries the live
- * canvas context, and the streamed reply is written back into shared
- * state so the whole team sees the same conversation.
+ * Personal AI chat. Every request carries the full team context; after
+ * each answer a one-line summary is posted to the Team Feed so the rest
+ * of the team knows what was explored.
  */
 export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
   const { block } = data;
-  const params = useParams<{ id: string }>();
-  const workspaceId = params?.id ?? "demo";
-  const { updateBlockData } = useBlocks();
-  const { sendChat } = useAI(workspaceId);
-  const self = useSelf();
-  const myName = self?.info?.name ?? "You";
+  const { updateBlockData, postFeedItem } = useBlocks();
+  const { sendChat, assist } = useAI();
+  const { me } = useTeam();
 
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -36,7 +32,6 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
 
   const messages = block.data.messages ?? [];
 
-  // Scroll to bottom whenever a message lands or tokens stream in
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -52,7 +47,7 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
       role: "user",
       content,
       timestamp: formatTime(),
-      user: myName,
+      user: me.name,
     };
     const nextMessages = [...messages, userMessage];
     updateBlockData(id, { messages: nextMessages });
@@ -78,6 +73,18 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
         timestamp: formatTime(),
       };
       updateBlockData(id, { messages: [...nextMessages, assistantMessage] });
+
+      // Post a one-line summary to the Team Feed (AI polish, template fallback)
+      const aiSummary = await assist("feed_summary", {
+        memberName: me.name,
+        text: `Q: ${content}\nA: ${full.slice(0, 400)}`,
+      });
+      postFeedItem({
+        type: "ai_chat",
+        title: `Asked AI about ${content.slice(0, 60)}${content.length > 60 ? "…" : ""}`,
+        summary: aiSummary ?? full.replace(/\s+/g, " ").slice(0, 140),
+        blockId: id,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -101,9 +108,9 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
         >
           {messages.length === 0 && !thinking && streaming === null && (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <Sparkles size={18} className="text-primary" />
-              <p className="text-xs text-text-secondary">
-                Ask anything — Nebula AI can see the whole canvas.
+              <Sparkles size={16} className="text-text-muted" />
+              <p className="text-[13px] text-text-secondary">
+                Ask anything — the AI sees your whole team&apos;s work
               </p>
             </div>
           )}
@@ -112,22 +119,18 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
           ))}
           {thinking && (
             <div className="flex items-center gap-2 text-xs text-text-secondary">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              Nebula AI is thinking...
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              Thinking...
             </div>
           )}
           {streaming !== null && (
             <MessageRow
-              message={{
-                role: "assistant",
-                content: streaming,
-                timestamp: formatTime(),
-              }}
+              message={{ role: "assistant", content: streaming, timestamp: formatTime() }}
               streaming
             />
           )}
           {error && (
-            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+            <p className="rounded-md border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
               {error}
             </p>
           )}
@@ -142,13 +145,13 @@ export function AIChatBlock({ id, data, selected }: NodeProps<BlockNodeData>) {
                 void handleSend();
               }
             }}
-            placeholder="Ask AI anything..."
-            className="nodrag h-8 flex-1 rounded-lg border border-border bg-background px-3 text-xs text-text-primary placeholder:text-text-secondary/60 focus:border-primary focus:outline-none"
+            placeholder="Ask anything..."
+            className="nodrag h-8 flex-1 rounded-md border border-border bg-background px-3 text-[13px] text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none"
           />
           <button
             onClick={() => void handleSend()}
             disabled={!input.trim() || thinking || streaming !== null}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white transition-opacity duration-100 hover:opacity-90 disabled:opacity-40"
             aria-label="Send"
           >
             <Send size={13} />
@@ -168,7 +171,7 @@ function MessageRow({
 }) {
   const isUser = message.role === "user";
   return (
-    <div className="flex items-start gap-2.5">
+    <div className={cn("flex items-start gap-2.5", isUser && "flex-row-reverse")}>
       <span
         className={cn(
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white",
@@ -177,21 +180,21 @@ function MessageRow({
       >
         {isUser ? initials(message.user ?? "You") : <Sparkles size={11} />}
       </span>
-      <div className="min-w-0 flex-1">
-        <div className="mb-0.5 flex items-baseline gap-2">
+      <div className={cn("min-w-0 flex-1", isUser && "text-right")}>
+        <div className={cn("mb-0.5 flex items-baseline gap-2", isUser && "flex-row-reverse")}>
           <span className="text-[11px] font-medium text-text-primary">
-            {isUser ? (message.user ?? "You") : "Nebula AI"}
+            {isUser ? (message.user ?? "You") : "AI"}
           </span>
-          <span className="text-[9px] text-text-secondary">
+          <span className="text-[10px] tabular-nums text-text-muted">
             {message.timestamp}
           </span>
         </div>
         {isUser ? (
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-text-primary/90">
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-text-primary/90">
             {message.content}
           </p>
         ) : (
-          <div className="text-xs leading-relaxed text-text-primary/90">
+          <div className="text-left text-[13px] leading-relaxed text-text-primary/90">
             <MarkdownContent content={message.content} />
             {streaming && (
               <span className="ml-0.5 inline-block h-3 w-1.5 animate-blink bg-primary align-middle" />
@@ -203,28 +206,21 @@ function MessageRow({
   );
 }
 
-/** Renders AI responses as proper markdown instead of raw asterisks/quotes. */
 function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        p: ({ children }) => (
-          <p className="mb-1.5 last:mb-0">{children}</p>
-        ),
+        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
         strong: ({ children }) => (
-          <strong className="font-semibold text-white">{children}</strong>
+          <strong className="font-semibold text-text-primary">{children}</strong>
         ),
         em: ({ children }) => <em className="italic">{children}</em>,
         ul: ({ children }) => (
-          <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">
-            {children}
-          </ul>
+          <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">{children}</ul>
         ),
         ol: ({ children }) => (
-          <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">
-            {children}
-          </ol>
+          <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">{children}</ol>
         ),
         li: ({ children }) => <li>{children}</li>,
         a: ({ children, href }) => (
@@ -232,7 +228,7 @@ function MarkdownContent({ content }: { content: string }) {
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="text-primary underline underline-offset-2 hover:text-primary-hover"
+            className="text-primary underline underline-offset-2"
           >
             {children}
           </a>
@@ -240,24 +236,24 @@ function MarkdownContent({ content }: { content: string }) {
         code: ({ children, className }) => {
           const isBlock = Boolean(className);
           return isBlock ? (
-            <code className="my-1.5 block overflow-x-auto rounded-md bg-background px-2.5 py-2 font-mono text-[11px] text-text-primary/90">
+            <code className="my-1.5 block overflow-x-auto rounded-md bg-background px-2.5 py-2 font-mono text-[12px]">
               {children}
             </code>
           ) : (
-            <code className="rounded bg-background px-1 py-0.5 font-mono text-[11px] text-text-primary/90">
+            <code className="rounded bg-background px-1 py-0.5 font-mono text-[12px]">
               {children}
             </code>
           );
         },
         pre: ({ children }) => <pre className="whitespace-pre-wrap">{children}</pre>,
         h1: ({ children }) => (
-          <h1 className="mb-1.5 text-sm font-semibold text-white">{children}</h1>
+          <h1 className="mb-1.5 text-sm font-semibold text-text-primary">{children}</h1>
         ),
         h2: ({ children }) => (
-          <h2 className="mb-1.5 text-sm font-semibold text-white">{children}</h2>
+          <h2 className="mb-1.5 text-sm font-semibold text-text-primary">{children}</h2>
         ),
         h3: ({ children }) => (
-          <h3 className="mb-1 text-xs font-semibold text-white">{children}</h3>
+          <h3 className="mb-1 text-[13px] font-semibold text-text-primary">{children}</h3>
         ),
         blockquote: ({ children }) => (
           <blockquote className="mb-1.5 border-l-2 border-border pl-2.5 text-text-secondary">

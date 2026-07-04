@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 import typography from "@tailwindcss/typography";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -11,23 +12,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0D0D0D",
-        surface: "#1A1A1A",
-        "surface-hover": "#222222",
-        border: "#2A2A2A",
-        primary: "#7C3AED",
-        "primary-hover": "#8B5CF6",
+        background: "rgb(var(--bg) / <alpha-value>)",
+        surface: "rgb(var(--bg-elevated) / <alpha-value>)",
+        "surface-hover": "rgb(var(--bg-float) / <alpha-value>)",
+        border: "rgb(var(--border) / <alpha-value>)",
+        "border-strong": "rgb(var(--border-strong) / <alpha-value>)",
+        primary: "rgb(var(--accent) / <alpha-value>)",
+        "primary-hover": "rgb(var(--accent-hover) / <alpha-value>)",
         secondary: "#3B82F6",
-        "text-primary": "#FFFFFF",
-        "text-secondary": "#888888",
-        success: "#10B981",
-        error: "#EF4444",
+        "text-primary": "rgb(var(--text) / <alpha-value>)",
+        "text-secondary": "rgb(var(--text-secondary) / <alpha-value>)",
+        "text-muted": "rgb(var(--text-muted) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)",
+        error: "rgb(var(--error) / <alpha-value>)",
         "block-chat": "#7C3AED",
         "block-code": "#3B82F6",
-        "block-image": "#EC4899",
-        "block-flow": "#F59E0B",
-        "block-api": "#10B981",
-        "block-mindmap": "#06B6D4",
+        "block-research": "#06B6D4",
+        "block-task": "#10B981",
+        "block-outreach": "#F59E0B",
+        "block-notes": "#888888",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],

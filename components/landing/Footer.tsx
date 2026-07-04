@@ -18,10 +18,10 @@ export function Footer() {
           <div className="max-w-xs">
             <Link href="/" className="flex items-center gap-2" data-cursor-hover>
               <Sparkles size={18} style={{ color: L.primary }} />
-              <span className="font-semibold text-white">Nebula</span>
+              <span className="font-semibold text-white">Nebula OS</span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: "#666" }}>
-              The shared AI brain for founding teams.
+              The operating system for founding teams.
             </p>
             <div className="mt-6 flex flex-col gap-2 text-sm" style={{ color: "#666" }}>
               {["Twitter", "LinkedIn", "GitHub"].map((s) => (

@@ -1,11 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import { useOthers, useSelf, useStorage } from "@/lib/liveblocks/config";
-import { buildCanvasContext, type CanvasContext } from "@/lib/canvas/context";
-import { useCanvasStore } from "@/store/canvasStore";
-import type { Block, ChatRole, CodeLanguage } from "@/types/blocks";
-import type { Workspace } from "@/types/workspace";
+import { useTeamAI } from "./useTeamAI";
+import { useTeam } from "./useTeam";
+import type { ChatRole, CodeLanguage } from "@/types/blocks";
 
 export type OutgoingChatMessage = {
   role: ChatRole;
@@ -13,45 +11,13 @@ export type OutgoingChatMessage = {
 };
 
 /**
- * Client-side AI gateway. Builds the live canvas context from Liveblocks
- * storage + presence and injects it into every request, so Gemini always
- * has the full picture of what the whole team is doing.
+ * Personal-workspace AI calls. Every request carries the full team
+ * context, so even a private AI chat knows what the rest of the team is
+ * doing right now.
  */
-export function useAI(workspaceId: string) {
-  const blocks = useStorage((root) => root.blocks);
-  const others = useOthers();
-  const self = useSelf();
-  const workspaceName = useCanvasStore((s) => s.workspaceName);
-
-  const getCanvasContext = useCallback((): CanvasContext => {
-    const plainBlocks: Block[] = blocks
-      ? (JSON.parse(JSON.stringify(blocks)) as Block[])
-      : [];
-    const memberNames = [
-      self?.info?.name ?? "You",
-      ...others.map((o) => o.info?.name ?? "Teammate"),
-    ];
-    const workspace: Workspace = {
-      id: workspaceId,
-      name: workspaceName,
-      createdBy: self?.id ?? "unknown",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      members: memberNames.map((name, i) => ({
-        id: `member-${i}`,
-        name,
-        role: i === 0 ? "owner" : "member",
-      })),
-      recentActivity: plainBlocks.slice(-10).map((b, i) => ({
-        id: `activity-${i}`,
-        user: b.lastEditedBy,
-        action: "edited",
-        target: b.data.title,
-        at: b.lastEditedAt,
-      })),
-    };
-    return buildCanvasContext(plainBlocks, workspace);
-  }, [blocks, others, self, workspaceId, workspaceName]);
+export function useAI() {
+  const { getTeamContext } = useTeamAI();
+  const { me } = useTeam();
 
   const sendChat = useCallback(
     async (
@@ -63,7 +29,8 @@ export function useAI(workspaceId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages,
-          canvasContext: getCanvasContext(),
+          memberName: me.name,
+          teamContext: getTeamContext(),
         }),
       });
       if (!res.ok || !res.body) {
@@ -73,7 +40,6 @@ export function useAI(workspaceId: string) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let full = "";
-      // Stream tokens as they arrive and surface each partial to the UI
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -82,7 +48,7 @@ export function useAI(workspaceId: string) {
       }
       return full;
     },
-    [getCanvasContext],
+    [getTeamContext, me.name],
   );
 
   const generateCode = useCallback(
@@ -93,7 +59,7 @@ export function useAI(workspaceId: string) {
         body: JSON.stringify({
           prompt,
           language,
-          canvasContext: getCanvasContext(),
+          teamContext: getTeamContext(),
         }),
       });
       const payload = (await res.json()) as { code?: string; error?: string };
@@ -102,21 +68,34 @@ export function useAI(workspaceId: string) {
       }
       return payload.code ?? "";
     },
-    [getCanvasContext],
+    [getTeamContext],
   );
 
-  const generateImage = useCallback(async (prompt: string): Promise<string> => {
-    const res = await fetch("/api/ai/image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const payload = (await res.json()) as { imageUrl?: string; error?: string };
-    if (!res.ok || payload.error) {
-      throw new Error(payload.error ?? `AI request failed (${res.status})`);
-    }
-    return payload.imageUrl ?? "";
-  }, []);
+  /**
+   * Small non-streaming helpers: summarize a URL/text, draft an outreach
+   * message, produce a one-line feed summary. Returns null when the AI
+   * isn't configured so callers can fall back to templates.
+   */
+  const assist = useCallback(
+    async (
+      mode: "summarize" | "draft_outreach" | "feed_summary",
+      payload: Record<string, string>,
+    ): Promise<string | null> => {
+      try {
+        const res = await fetch("/api/ai/assist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, ...payload }),
+        });
+        const data = (await res.json()) as { text?: string; error?: string };
+        if (!res.ok || !data.text) return null;
+        return data.text;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
-  return { sendChat, generateCode, generateImage, getCanvasContext };
+  return { sendChat, generateCode, assist };
 }

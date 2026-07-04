@@ -31,6 +31,13 @@ export function useMultiplayer() {
     [updateMyPresence],
   );
 
+  const setActiveWorkspace = useCallback(
+    (activeWorkspace: string) => {
+      updateMyPresence({ activeWorkspace });
+    },
+    [updateMyPresence],
+  );
+
   const editorOfBlock = useCallback(
     (blockId: string): { name: string; color: string } | null => {
       for (const other of others) {
@@ -46,5 +53,12 @@ export function useMultiplayer() {
     [others],
   );
 
-  return { others, self, moveCursor, setActiveBlock, editorOfBlock };
+  return {
+    others,
+    self,
+    moveCursor,
+    setActiveBlock,
+    setActiveWorkspace,
+    editorOfBlock,
+  };
 }

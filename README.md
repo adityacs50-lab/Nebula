@@ -1,15 +1,17 @@
-# Nebula
+# Nebula OS
 
-**The shared AI brain for founding teams.**
+**The operating system for founding teams.**
 
-Your co-founder is on ChatGPT. You're on Gemini. Nobody knows what the AI told who. Nebula fixes that: one infinite multiplayer canvas where every AI prompt and output lives in one shared space — and the AI has full context of everything the whole team is working on.
+Every team member gets their own AI workspace on the left. Everything flows into a shared Team Feed on the right. One Team AI reads everything across all workspaces and can answer any question about what the whole team is doing. No standups. No Slack threads. Just ship.
 
 ## What's inside
 
-- **Infinite multiplayer canvas** — react-flow canvas with live cursors, presence, and shared state via Liveblocks. Join with an invite link and you're in the same room.
-- **Canvas-aware AI** — every Gemini API call (`gemini-2.5-flash`) is injected with a live snapshot of the entire canvas (`lib/canvas/context.ts`), so the AI knows what every teammate is building right now.
-- **Six block types** — AI Chat (streaming, markdown-rendered), Generate Code (Gemini-powered, syntax highlighted), AI Image (Gemini-powered generation), User Flow (nested react-flow), API Integration, and Mind Map.
-- **Auth + persistence** — Supabase auth (email/password + Google OAuth), workspaces, members, invites, and RLS policies.
+- **Personal workspaces per member** — each founder has their own react-flow canvas of blocks; click a teammate in the sidebar to visit theirs (read-only). Live cursors + presence via Liveblocks.
+- **Team Feed** — every significant action (AI chat, generated code, research finding, completed task, outreach reply, important note) auto-posts a one-line summary to a real-time feed, with reactions and jump-to-canvas links.
+- **Nebula Team AI** — docked under the feed; every question is answered against a live snapshot of all members' blocks + the feed (`lib/context/teamContext.ts`). Quick prompts: Team status, blockers, today's wins, investor update.
+- **Six block types** — AI Chat (streaming, markdown), Code (Gemini, syntax highlighted), Research (paste a URL, AI summarizes), Tasks (priorities + progress), Outreach (pipeline tracking + AI-drafted messages), Notes (markdown-lite).
+- **Linear-grade UI system** — light + dark themes (next-themes, CSS-variable tokens), Cmd+K command palette, 13px type scale, restrained accent usage.
+- **Auth + persistence** — Supabase auth, workspaces, members, invites, feed history, RLS policies.
 
 ## Tech stack
 

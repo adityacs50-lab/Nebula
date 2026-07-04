@@ -10,50 +10,49 @@ import type { TeamContext } from "@/lib/context/teamContext";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type ChatRequestBody = {
-  messages: Array<{ role: "user" | "assistant"; content: string }>;
-  memberName?: string;
+type TeamRequestBody = {
+  question: string;
   teamContext: TeamContext;
 };
 
 export async function POST(req: Request): Promise<Response> {
   if (!geminiConfigured()) {
     return new Response(
-      "Nebula AI is not connected yet. Add your GEMINI_API_KEY to .env.local (see README.md) and restart the server.",
+      "Nebula Team AI is not connected yet. Add your GEMINI_API_KEY to .env.local (see README.md) and restart the server.",
       { status: 503 },
     );
   }
 
-  let body: ChatRequestBody;
+  let body: TeamRequestBody;
   try {
-    body = (await req.json()) as ChatRequestBody;
+    body = (await req.json()) as TeamRequestBody;
   } catch {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const { messages, memberName, teamContext } = body;
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return new Response("messages array is required", { status: 400 });
+  const question = body.question?.trim();
+  if (!question) {
+    return new Response("question is required", { status: 400 });
   }
 
   const client = getGeminiClient();
-  const systemInstruction = `You are the AI inside ${memberName ?? "a founder"}'s personal workspace in Nebula OS — the operating system for founding teams.
-
-You have full visibility into what the entire team is working on right now.
+  const systemInstruction = `You are Nebula Team AI — the shared brain of a founding team.
+You have complete visibility into everything every team member is working on right now.
 
 Team context:
-${JSON.stringify(teamContext, null, 2)}
+${JSON.stringify(body.teamContext, null, 2)}
 
-Guidelines:
-- Always respond with awareness of the full team context
-- Reference what other team members are doing when it's relevant to the question
-- Be concise, direct, and builder-focused
-- You're talking to founders building something real — match their energy`;
+Answer questions about the team with:
+- Specific facts from their actual activity
+- Names of team members
+- Real tasks, conversations, and findings
+- Actionable insights
+- Direct, founder-friendly tone
+- No fluff, no generic advice
 
-  const contents = messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+If asked for team status, format as:
+[Member name]: [One line of what they're working on]
+Then: Key wins, blockers, and what needs a decision.`;
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream<Uint8Array>({
@@ -67,7 +66,9 @@ Guidelines:
           });
           let emitted = false;
           try {
-            const result = await model.generateContentStream({ contents });
+            const result = await model.generateContentStream({
+              contents: [{ role: "user", parts: [{ text: question }] }],
+            });
             for await (const chunk of result.stream) {
               const text = chunk.text();
               if (text) {
@@ -79,8 +80,6 @@ Guidelines:
             return;
           } catch (error) {
             lastError = error;
-            // Model missing or quota-blocked for this key and nothing has
-            // been streamed yet — safe to retry with the next model.
             if (
               !emitted &&
               (isModelUnavailableError(error) || isQuotaError(error))
@@ -92,7 +91,7 @@ Guidelines:
         }
         controller.enqueue(
           encoder.encode(
-            `\n\n[Nebula AI error: ${lastError instanceof Error ? lastError.message : "Unknown error"}]`,
+            `\n\n[Team AI error: ${lastError instanceof Error ? lastError.message : "Unknown error"}]`,
           ),
         );
         controller.close();

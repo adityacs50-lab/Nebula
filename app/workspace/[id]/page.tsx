@@ -7,13 +7,11 @@ import {
   RoomProvider,
   roomIdForWorkspace,
 } from "@/lib/liveblocks/config";
-import { initialBlocks } from "@/lib/canvas/initialBlocks";
-import { Canvas } from "@/components/canvas/Canvas";
-import { Sidebar } from "@/components/sidebar/Sidebar";
-import { TopBar } from "@/components/topbar/TopBar";
-import { useCanvasStore } from "@/store/canvasStore";
-import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { DEMO_BLOCKS, DEMO_FEED } from "@/lib/demo";
+import { WorkspaceLayout } from "@/components/workspace/WorkspaceLayout";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { recordRecentWorkspace } from "@/lib/recentWorkspaces";
+import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 import type { Connection } from "@/types/blocks";
 
 export default function WorkspacePage({
@@ -22,14 +20,12 @@ export default function WorkspacePage({
   params: { id: string };
 }) {
   const workspaceId = params.id;
-  const setWorkspaceName = useCanvasStore((s) => s.setWorkspaceName);
+  const setWorkspaceName = useWorkspaceStore((s) => s.setWorkspaceName);
 
   useEffect(() => {
     recordRecentWorkspace(workspaceId);
   }, [workspaceId]);
 
-  // Pull the real workspace name from Supabase when configured;
-  // fall back to the demo name otherwise.
   useEffect(() => {
     if (!supabaseConfigured() || workspaceId === "demo") {
       setWorkspaceName("Project Nebula");
@@ -54,22 +50,17 @@ export default function WorkspacePage({
         name: "",
         color: "#7C3AED",
         activeBlockId: null,
+        activeWorkspace: "me",
+        status: "online",
       }}
       initialStorage={{
-        blocks: new LiveList(initialBlocks),
+        blocks: new LiveList(DEMO_BLOCKS),
         connections: new LiveList<Connection>([]),
+        feedItems: new LiveList(DEMO_FEED),
       }}
     >
       <ReactFlowProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-background">
-          <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <TopBar workspaceId={workspaceId} />
-            <main className="relative min-h-0 flex-1">
-              <Canvas />
-            </main>
-          </div>
-        </div>
+        <WorkspaceLayout workspaceId={workspaceId} />
       </ReactFlowProvider>
     </RoomProvider>
   );

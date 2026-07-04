@@ -35,9 +35,9 @@ export function connectionToEdge(connection: Connection): Edge {
 
 export const ADDABLE_BLOCK_TYPES: BlockType[] = [
   "ai-chat",
-  "generate-code",
-  "ai-image",
-  "user-flow",
-  "api-integration",
-  "mind-map",
+  "code",
+  "research",
+  "task",
+  "outreach",
+  "notes",
 ];

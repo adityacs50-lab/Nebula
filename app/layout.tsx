@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,18 +10,25 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Nebula — The shared AI brain for founding teams",
+  title: "Nebula OS — The operating system for founding teams",
   description:
-    "One shared canvas where your whole founding team works with AI. Every prompt, every output, one space — and the AI sees all of it.",
+    "Every founding team member gets their own AI workspace. Everything flows into one shared team brain. No standups. No Slack threads. Just ship.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans text-text-primary antialiased">
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          storageKey="nebula-theme"
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

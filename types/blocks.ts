@@ -1,10 +1,10 @@
 export type BlockType =
   | "ai-chat"
-  | "generate-code"
-  | "ai-image"
-  | "user-flow"
-  | "api-integration"
-  | "mind-map";
+  | "code"
+  | "research"
+  | "task"
+  | "outreach"
+  | "notes";
 
 export type ChatRole = "user" | "assistant";
 
@@ -17,59 +17,77 @@ export type ChatMessage = {
 
 export type CodeLanguage =
   | "Python"
-  | "JavaScript"
   | "TypeScript"
+  | "JavaScript"
   | "Rust"
   | "Go";
 
-export type FlowNodeKind = "start" | "action" | "end";
+export type TaskPriority = "high" | "medium" | "low";
 
-export type FlowNode = {
+export type TaskItem = {
   id: string;
-  label: string;
-  type: FlowNodeKind;
+  text: string;
+  done: boolean;
+  priority: TaskPriority;
 };
 
-export type MindMapNode = {
+export type OutreachChannel = "LinkedIn" | "Email" | "Twitter";
+export type OutreachStatus =
+  | "Sent"
+  | "Opened"
+  | "Replied"
+  | "Call Booked"
+  | "Closed";
+
+export type OutreachContact = {
   id: string;
-  label: string;
-  x: number;
-  y: number;
-  parentId: string | null;
+  name: string;
+  company: string;
+  channel: OutreachChannel;
+  status: OutreachStatus;
+  notes?: string;
 };
+
+export type ResearchTag = "competitor" | "market" | "technical" | "customer";
 
 /**
- * All block payloads live in a single JSON-serializable shape so blocks can
- * be stored directly inside Liveblocks Storage (Lson) and Supabase jsonb.
- * Declared as type aliases (not interfaces) so they satisfy Liveblocks' Json
- * structural constraints.
+ * One JSON-serializable payload shape for all block types so blocks can
+ * live in Liveblocks Storage (Lson) and Supabase jsonb.
  */
 export type BlockData = {
   title: string;
+  // ai-chat
   messages?: ChatMessage[];
+  // code
   language?: CodeLanguage;
   prompt?: string;
   code?: string;
-  imageIndex?: number;
-  images?: string[];
-  nodes?: FlowNode[];
-  mindNodes?: MindMapNode[];
+  // research
+  url?: string;
+  summary?: string;
+  notes?: string;
+  tags?: ResearchTag[];
+  // task
+  tasks?: TaskItem[];
+  // outreach
+  contacts?: OutreachContact[];
+  // notes
+  body?: string;
+  important?: boolean;
+  // shared
   minimized?: boolean;
 };
 
-export type XYPosition = {
-  x: number;
-  y: number;
-};
-
-export type BlockSize = {
-  width: number;
-  height: number;
-};
+export type XYPosition = { x: number; y: number };
+export type BlockSize = { width: number; height: number };
 
 export type Block = {
   id: string;
   type: BlockType;
+  /** Which team member's workspace this block belongs to. */
+  ownerId: string;
+  ownerName: string;
+  ownerColor: string;
   position: XYPosition;
   size: BlockSize;
   data: BlockData;
@@ -85,27 +103,27 @@ export type Connection = {
 
 export const BLOCK_COLORS: Record<BlockType, string> = {
   "ai-chat": "#7C3AED",
-  "generate-code": "#3B82F6",
-  "ai-image": "#EC4899",
-  "user-flow": "#F59E0B",
-  "api-integration": "#10B981",
-  "mind-map": "#06B6D4",
+  code: "#3B82F6",
+  research: "#06B6D4",
+  task: "#10B981",
+  outreach: "#F59E0B",
+  notes: "#888888",
 };
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   "ai-chat": "AI Chat",
-  "generate-code": "Generate Code",
-  "ai-image": "AI Image",
-  "user-flow": "User Flow",
-  "api-integration": "API Integration",
-  "mind-map": "Mind Map",
+  code: "Code",
+  research: "Research",
+  task: "Tasks",
+  outreach: "Outreach",
+  notes: "Notes",
 };
 
 export const DEFAULT_BLOCK_SIZES: Record<BlockType, BlockSize> = {
-  "ai-chat": { width: 420, height: 320 },
-  "generate-code": { width: 420, height: 340 },
-  "ai-image": { width: 380, height: 360 },
-  "user-flow": { width: 440, height: 300 },
-  "api-integration": { width: 420, height: 340 },
-  "mind-map": { width: 440, height: 340 },
+  "ai-chat": { width: 420, height: 340 },
+  code: { width: 440, height: 360 },
+  research: { width: 400, height: 340 },
+  task: { width: 360, height: 320 },
+  outreach: { width: 460, height: 340 },
+  notes: { width: 380, height: 300 },
 };

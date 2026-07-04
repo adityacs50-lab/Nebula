@@ -73,24 +73,21 @@ export function Hero() {
             initial="hidden"
             animate="show"
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-            className="text-[clamp(3rem,9vw,6rem)] leading-[0.95] tracking-[-0.03em] text-white"
+            className="text-[clamp(2.5rem,6.5vw,4.5rem)] leading-[1.02] tracking-[-0.03em] text-white"
           >
             <HeadingLine>
-              <span className="font-thin">The</span>
+              <span className="font-thin">Your team is working.</span>
+            </HeadingLine>
+            <HeadingLine>
+              <span className="font-bold">Nobody knows what</span>
             </HeadingLine>
             <HeadingLine>
               <span
                 className="bg-clip-text font-bold text-transparent"
                 style={{ backgroundImage: L.gradient }}
               >
-                shared
+                anyone is doing.
               </span>
-            </HeadingLine>
-            <HeadingLine>
-              <span className="font-thin">AI brain</span>
-            </HeadingLine>
-            <HeadingLine>
-              <span className="font-bold">for founders.</span>
             </HeadingLine>
           </motion.h1>
 
@@ -101,11 +98,12 @@ export function Hero() {
             className="mt-8 max-w-[380px] text-base leading-relaxed"
             style={{ color: "#666" }}
           >
-            Three co-founders. Three AI tools. Zero shared context.
+            Nebula OS gives every founding team member their own AI
+            workspace — and puts everything in one shared team brain.
             <br />
             <br />
             <span className="text-white/80">
-              Nebula puts your whole team on one canvas, one AI.
+              No standups. No Slack threads. Just ship.
             </span>
           </motion.p>
 

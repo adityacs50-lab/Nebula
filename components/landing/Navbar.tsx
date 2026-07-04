@@ -42,7 +42,7 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-2" data-cursor-hover>
           <Sparkles size={18} style={{ color: L.primary }} />
           <span className="text-base font-semibold tracking-tight text-white">
-            Nebula
+            Nebula OS
           </span>
         </Link>
 
